@@ -1,0 +1,53 @@
+{
+    "os": "Windows-10-10.0.26100-SP0",
+    "python": "3.8.13",
+    "heartbeatAt": "2025-03-18T11:22:16.066673",
+    "startedAt": "2025-03-18T11:22:15.272018",
+    "docker": null,
+    "cuda": null,
+    "args": [],
+    "state": "running",
+    "program": "D:/\uc6d0\ub4dc\ub77c\uc774\ube0c \ubc31\uc5c5/OneDrive/comm_marl2/comm_marl2/main.py",
+    "codePathLocal": "main.py",
+    "codePath": "main.py",
+    "git": {
+        "remote": "https://github.com/suenghuny/comm_marl2.git",
+        "commit": "57b1285a14c256bf169b1eb394ce9917c9920ab9"
+    },
+    "email": "suenghuny@naver.com",
+    "root": "D:/\uc6d0\ub4dc\ub77c\uc774\ube0c \ubc31\uc5c5/OneDrive/comm_marl2/comm_marl2",
+    "host": "\uc624\uc2b9\ud5cc",
+    "username": "sueng",
+    "executable": "C:\\Users\\sueng\\anaconda3\\envs\\pyg\\python.exe",
+    "cpu_count": 12,
+    "cpu_count_logical": 20,
+    "cpu_freq": {
+        "current": 2100.0,
+        "min": 0.0,
+        "max": 2100.0
+    },
+    "cpu_freq_per_core": [
+        {
+            "current": 2100.0,
+            "min": 0.0,
+            "max": 2100.0
+        }
+    ],
+    "disk": {
+        "/": {
+            "total": 2737.4238243103027,
+            "used": 122.56348419189453
+        }
+    },
+    "gpu": "NVIDIA GeForce RTX 3070 Ti",
+    "gpu_count": 1,
+    "gpu_devices": [
+        {
+            "name": "NVIDIA GeForce RTX 3070 Ti",
+            "memory_total": 8589934592
+        }
+    ],
+    "memory": {
+        "total": 63.79674530029297
+    }
+}

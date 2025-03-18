@@ -1,0 +1,67 @@
+[['125.00.00.5625', 1], ['45.00.00.375', 1], ['150.00.00.75', 1], ['45.00.00.375', 4], ['125.00.00.5625', 4], ['150.00.00.75', 4]]
+id :  45.00.00.375 count :  15
+id :  125.00.00.5625 count :  5
+id :  150.00.00.75 count :  2
+152
+152 128
+152 128
+168 128
+168 128
+D:\원드라이브 백업\OneDrive\comm_marl2\comm_marl2\GDN3.py:404: UserWarning: To copy construct from a tensor, it is recommended to use sourceTensor.clone().detach() or sourceTensor.clone().detach().requires_grad_(True), rather than torch.tensor(sourceTensor).
+  agent_feature = torch.tensor(agent_feature, dtype=torch.float, device=device).unsqueeze(0)
+D:\원드라이브 백업\OneDrive\comm_marl2\comm_marl2\GLCN\GLCN2.py:84: UserWarning: To copy construct from a tensor, it is recommended to use sourceTensor.clone().detach() or sourceTensor.clone().detach().requires_grad_(True), rather than torch.tensor(sourceTensor).
+  torch.tensor(A[b], dtype=torch.long).to(device),
+D:\원드라이브 백업\OneDrive\comm_marl2\comm_marl2\GLCN\GLCN2.py:85: UserWarning: To copy construct from a tensor, it is recommended to use sourceTensor.clone().detach() or sourceTensor.clone().detach().requires_grad_(True), rather than torch.tensor(sourceTensor).
+  torch.ones(torch.tensor(A[b]).shape[1]).to(device),
+MMM2 Total reward in episode 0 = 1.173, epsilon : 0.999, time_step : 35, episode_duration : 1.648, gamma2 : 0.01
+upper_bound nan
+C:\Users\sueng\anaconda3\envs\pyg\lib\site-packages\numpy\core\fromnumeric.py:3474: RuntimeWarning: Mean of empty slice.
+  return _methods._mean(a, axis=axis, dtype=dtype,
+C:\Users\sueng\anaconda3\envs\pyg\lib\site-packages\numpy\core\_methods.py:189: RuntimeWarning: invalid value encountered in double_scalars
+  ret = ret.dtype.type(ret / rcount)
+C:\Users\sueng\anaconda3\envs\pyg\lib\site-packages\numpy\core\fromnumeric.py:3474: RuntimeWarning: Mean of empty slice.
+  return _methods._mean(a, axis=axis, dtype=dtype,
+C:\Users\sueng\anaconda3\envs\pyg\lib\site-packages\numpy\core\_methods.py:189: RuntimeWarning: invalid value encountered in double_scalars
+  ret = ret.dtype.type(ret / rcount)
+D:\원드라이브 백업\OneDrive\comm_marl2\comm_marl2\GDN3.py:404: UserWarning: To copy construct from a tensor, it is recommended to use sourceTensor.clone().detach() or sourceTensor.clone().detach().requires_grad_(True), rather than torch.tensor(sourceTensor).
+  agent_feature = torch.tensor(agent_feature, dtype=torch.float, device=device).unsqueeze(0)
+D:\원드라이브 백업\OneDrive\comm_marl2\comm_marl2\GLCN\GLCN2.py:84: UserWarning: To copy construct from a tensor, it is recommended to use sourceTensor.clone().detach() or sourceTensor.clone().detach().requires_grad_(True), rather than torch.tensor(sourceTensor).
+  torch.tensor(A[b], dtype=torch.long).to(device),
+D:\원드라이브 백업\OneDrive\comm_marl2\comm_marl2\GLCN\GLCN2.py:85: UserWarning: To copy construct from a tensor, it is recommended to use sourceTensor.clone().detach() or sourceTensor.clone().detach().requires_grad_(True), rather than torch.tensor(sourceTensor).
+  torch.ones(torch.tensor(A[b]).shape[1]).to(device),
+MMM2 Total reward in episode 1 = 1.859, epsilon : 0.999, time_step : 71, episode_duration : 0.703, gamma2 : 0.01
+upper_bound nan
+nan
+MMM2 Total reward in episode 2 = 1.993, epsilon : 0.998, time_step : 104, episode_duration : 0.534, gamma2 : 0.01
+upper_bound nan
+MMM2 Total reward in episode 3 = 1.783, epsilon : 0.997, time_step : 140, episode_duration : 0.571, gamma2 : 0.01
+upper_bound nan
+MMM2 Total reward in episode 4 = 2.231, epsilon : 0.997, time_step : 183, episode_duration : 0.637, gamma2 : 0.01
+upper_bound nan
+MMM2 Total reward in episode 5 = 1.15, epsilon : 0.996, time_step : 216, episode_duration : 0.472, gamma2 : 0.01
+upper_bound nan
+MMM2 Total reward in episode 6 = 1.966, epsilon : 0.995, time_step : 254, episode_duration : 0.513, gamma2 : 0.01
+upper_bound nan
+MMM2 Total reward in episode 7 = 1.514, epsilon : 0.994, time_step : 297, episode_duration : 0.534, gamma2 : 0.01
+upper_bound nan
+Traceback (most recent call last):
+  File "D:/원드라이브 백업/OneDrive/comm_marl2/comm_marl2/main.py", line 364, in <module>
+    main()
+  File "D:/원드라이브 백업/OneDrive/comm_marl2/comm_marl2/main.py", line 282, in main
+    episode_reward, epsilon, t, eval, laplacian_quadratic, second_eig_upperbound, rl_loss, q_tot, cum_losses, comm_loss = train(agent, env, e, t, train_start, epsilon, min_epsilon, anneal_epsilon, initializer, np.mean(cum_losses), graph_learning_stop, anneal_gamma2, min_gamma2)
+  File "D:/원드라이브 백업/OneDrive/comm_marl2/comm_marl2/main.py", line 168, in train
+    loss, laplacian_quadratic, sec_eig_upperbound, rl_loss, q_tot, comm_loss = agent.learn(cum_losses_old, graph_learning_stop)
+  File "D:\원드라이브 백업\OneDrive\comm_marl2\comm_marl2\GDN3.py", line 689, in learn
+    loss.backward()
+  File "C:\Users\sueng\anaconda3\envs\pyg\lib\site-packages\torch\_tensor.py", line 363, in backward
+    torch.autograd.backward(self, gradient, retain_graph, create_graph, inputs=inputs)
+  File "C:\Users\sueng\anaconda3\envs\pyg\lib\site-packages\torch\autograd\__init__.py", line 166, in backward
+    grad_tensors_ = _make_grads(tensors, grad_tensors_, is_grads_batched=False)
+  File "C:\Users\sueng\anaconda3\envs\pyg\lib\site-packages\torch\autograd\__init__.py", line 67, in _make_grads
+    raise RuntimeError("grad can be implicitly created only for scalar outputs")
+RuntimeError: grad can be implicitly created only for scalar outputs
+MMM2 Total reward in episode 8 = 1.926, epsilon : 0.994, time_step : 328, episode_duration : 0.458, gamma2 : 0.01
+upper_bound nan
+MMM2 Total reward in episode 9 = 1.735, epsilon : 0.993, time_step : 361, episode_duration : 0.454, gamma2 : 0.01
+upper_bound nan
+torch.Size([]) torch.Size([]) torch.Size([]) torch.Size([24])
