@@ -76,7 +76,7 @@ class Q_Attention(nn.Module):
         self.fc4 = nn.Linear(int(hidden_dim/4), int(hidden_dim/8))
         self.fc5 = nn.Linear(int(hidden_dim/8), 1)
 
-    def forward(self, obs, action):
+    def forward(self, obs, action, mask):
         """
         Args:
             obs: [batch_size, num_agent, obs_size]
@@ -84,8 +84,8 @@ class Q_Attention(nn.Module):
         Returns:
             q: [batch_size, num_agent, action_size]
         """
-        batch_size, num_agent, _ = obs.shape
-        _, num_action, _ = action.shape
+        batch_size, num_agent, num_action = obs.shape
+        _, num_action,_ = action.shape
 
         # Encode observations and actions
         encoded_obs = self.obs_encoder(obs)  # [batch_size, num_agent, hidden_dim]

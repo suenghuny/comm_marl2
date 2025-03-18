@@ -26,7 +26,7 @@ def sample_adjacency_matrix(weight_matrix):
     return adjacency_matrix
 
 
-def gumbel_sigmoid(logits: Tensor, tau: float = 1.4, hard: bool = True, threshold: float = 0.5,
+def gumbel_sigmoid(logits: Tensor, tau: float = 1.0, hard: bool = True, threshold: float = 0.5,
                    mini_batch: bool = False) -> Tensor:
     gumbels = (
         -torch.empty_like(logits, memory_format=torch.legacy_contiguous_format).exponential_().log()
@@ -58,6 +58,54 @@ def weight_init_xavier_uniform(submodule):
         submodule.weight.data.fill_(1.0)
         submodule.bias.data.zero_()
 
+
+class GAT2(nn.Module):
+    def __init__(self, feature_size, graph_embedding_size):
+        super(GAT2, self).__init__()
+        self.graph_embedding_size = graph_embedding_size
+        self.Ws = nn.Parameter(torch.Tensor(feature_size, graph_embedding_size))
+        self.Wq = nn.Parameter(torch.Tensor(feature_size, 1))
+        self.Wk = nn.Parameter(torch.Tensor(feature_size, 1))
+        glorot(self.Ws)
+        glorot(self.Wq)
+        glorot(self.Wk)
+        self.a = nn.Parameter(torch.empty(size=(2 * graph_embedding_size, 1)))
+        nn.init.xavier_uniform_(self.a.data, gain=1.414)
+        self.dropout = nn.Dropout(0.2)
+
+    def _prepare_attentional_mechanism_input(self, Wq, Wv):
+        Wh1 = Wq
+        Wh2 = Wv
+        e = Wh1 + torch.transpose(Wh2, 1, 2)
+        return F.leaky_relu(e, negative_slope=cfg.negativeslope)
+
+    def forward(self, A, X, dense=False):
+        batch_size, num_nodes, feature_size = X.shape
+        if dense == False:
+            E = torch.stack([
+                torch.sparse_coo_tensor(
+                    torch.tensor(A[b], dtype=torch.long).to(device),
+                    torch.ones(torch.tensor(A[b]).shape[1]).to(device),
+                    (num_nodes, num_nodes)
+                ).to_dense()
+                for b in range(batch_size)
+            ], dim=0)
+        else:
+            E = A
+        Wh = X @ self.Ws  # [batch_size, num_nodes, graph_embedding_size]
+        Wq = X @ self.Wq  # [batch_size, num_nodes, graph_embedding_size]
+        Wk = X @ self.Wk  # [batch_size, num_nodes, graph_embedding_size]
+        e = self._prepare_attentional_mechanism_input(Wq,Wk)
+        zero_vec = -9e15 * torch.ones_like(E)
+        attention = torch.where(E > 0, E*e, zero_vec)
+        attention = self.dropout(F.softmax(attention, dim=2))
+
+        # 최종 노드 표현 계산
+        H = F.elu(torch.matmul(attention, Wh))
+
+        # 출력에 드롭아웃 적용
+        H = self.dropout(H)
+        return H
 
 class GAT(nn.Module):
     def __init__(self, feature_size, graph_embedding_size):

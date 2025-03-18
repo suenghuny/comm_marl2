@@ -11,9 +11,10 @@ import pickle
 from collections import deque
 from torch.distributions import Categorical
 import numpy as np
-from GLCN.GLCN2 import GLCN, GAT2, GAT
+from GLCN.GLCN2 import GLCN, GAT
 from cfg import get_cfg
 cfg = get_cfg()
+#from GAT.model import GAT
 from GAT.layers import device
 from copy import deepcopy
 
@@ -93,7 +94,8 @@ class Replay_Buffer:
             if cat == 'done':
                 yield datas[6][s]
 
-
+            if cat == 'avail_action':
+                yield datas[7][s]
 
 
             if cat == 'avail_action_next':
@@ -158,6 +160,11 @@ class Replay_Buffer:
 
         edge_index_ally_next = self.generating_mini_batch(self.buffer, sampled_batch_idx, cat='edge_index_ally_next')
         edge_indices_ally_next = list(edge_index_ally_next)
+
+        avail_action = self.generating_mini_batch(self.buffer, sampled_batch_idx, cat='avail_action')
+        avail_actions = list(avail_action)
+
+
         avail_action_next = self.generating_mini_batch(self.buffer, sampled_batch_idx, cat='avail_action_next')
         avail_actions_next = list(avail_action_next)
 
@@ -186,7 +193,9 @@ class Replay_Buffer:
                edge_indices_enemy, \
                edge_indices_ally, \
                rewards, \
-               dones, node_features_next, action_features_next, edge_indices_enemy_next, edge_indices_ally_next, avail_actions_next,dead_masking, \
+               dones, node_features_next, action_features_next, edge_indices_enemy_next, edge_indices_ally_next, \
+               avail_actions,\
+               avail_actions_next,dead_masking, \
                dead_masking_next, agent_feature, agent_feature_next, sum_state, sum_state_next
 
 class Agent(nn.Module):
@@ -291,15 +300,15 @@ class Agent(nn.Module):
                                                        n_representation_obs=self.n_representation_action).to(device)  # 수정사항
 
 
-        self.func_obs = GAT2(feature_size=self.n_representation_obs, graph_embedding_size=self.graph_embedding).to(device)
-        self.func_obs_tar = GAT2(feature_size=self.n_representation_obs, graph_embedding_size=self.graph_embedding).to(device)
+        self.func_obs = GAT(feature_size=self.n_representation_obs, graph_embedding_size=self.graph_embedding).to(device)
+        self.func_obs_tar = GAT(feature_size=self.n_representation_obs, graph_embedding_size=self.graph_embedding).to(device)
 
-        self.func_comm = GAT2(feature_size=self.graph_embedding+n_representation_comm, graph_embedding_size=self.graph_embedding_comm).to(device)
-        self.func_comm_tar = GAT2(feature_size=self.graph_embedding+n_representation_comm, graph_embedding_size=self.graph_embedding_comm).to(device)
+        self.func_comm = GAT(feature_size=self.graph_embedding+n_representation_comm, graph_embedding_size=self.graph_embedding_comm).to(device)
+        self.func_comm_tar = GAT(feature_size=self.graph_embedding+n_representation_comm, graph_embedding_size=self.graph_embedding_comm).to(device)
 
-        self.func_comm2 = GAT2(feature_size=self.graph_embedding_comm,
+        self.func_comm2 = GAT(feature_size=self.graph_embedding_comm,
                              graph_embedding_size=self.graph_embedding_comm).to(device)
-        self.func_comm2_tar = GAT2(feature_size=self.graph_embedding_comm,
+        self.func_comm2_tar = GAT(feature_size=self.graph_embedding_comm,
                                  graph_embedding_size=self.graph_embedding_comm).to(device)
 
 
@@ -317,8 +326,8 @@ class Agent(nn.Module):
 
 
         print(self.graph_embedding_comm+self.n_representation_action)
-        self.Q = Network(self.graph_embedding_comm+self.n_representation_action, hidden_size_Q).to(device)
-        self.Q_tar = Network(self.graph_embedding_comm+self.n_representation_action, hidden_size_Q).to(device)
+        self.Q = Q_Attention(self.graph_embedding_comm, self.n_representation_action, hidden_size_Q).to(device)
+        self.Q_tar = Q_Attention(self.graph_embedding_comm, self.n_representation_action, hidden_size_Q).to(device)
 
         self.C = Network(self.graph_embedding + self.n_representation_comm+self.n_representation_action, hidden_size_Q).to(device)
         self.C_tar = Network(self.graph_embedding + self.n_representation_comm+self.n_representation_action, hidden_size_Q).to(device)
@@ -401,6 +410,8 @@ class Agent(nn.Module):
             with torch.no_grad():
                 node_feature = torch.tensor(node_feature, dtype=torch.float, device=device).unsqueeze(0)
                 agent_feature = torch.tensor(agent_feature, dtype=torch.float, device=device).unsqueeze(0)
+                edge_index_obs = torch.tensor(edge_index_obs).long().to(device).unsqueeze(0)
+
                 batch_size = node_feature.shape[0]
                 num_nodes = node_feature.shape[1]
                 num_agents = agent_feature.shape[1]
@@ -408,17 +419,13 @@ class Agent(nn.Module):
                 agent_feature = agent_feature.reshape(batch_size * num_agents, -1)
                 node_embedding_obs  = self.node_representation(node_feature)
                 node_embedding_comm = self.node_representation_comm(agent_feature)
-
-
                 node_embedding_obs = node_embedding_obs.reshape(batch_size, num_nodes, -1)
                 node_embedding_comm = node_embedding_comm.reshape(batch_size, num_agents, -1)
-                edge_index_obs = torch.tensor(edge_index_obs).long().to(device).unsqueeze(0)
                 node_embedding_obs = self.func_obs(X = node_embedding_obs, A = edge_index_obs)[:, :n_agent,:]
                 cat_embedding = torch.cat([node_embedding_obs, node_embedding_comm], dim=2)
                 A_new, logits = self.func_glcn(cat_embedding)
-                A_new = A_new.unsqueeze(0)
                 cat_embedding= self.func_comm(X = cat_embedding, A = A_new, dense = True)
-                cat_embedding = self.func_comm2(X=cat_embedding, A = A_new.detach(),dense=True)
+                cat_embedding = self.func_comm2(X=cat_embedding, A = A_new.detach(), dense=True)
                 return cat_embedding, A_new
         else:
             if target == False:
@@ -466,7 +473,7 @@ class Agent(nn.Module):
 
 
 
-    def cal_Q(self, obs, actions, action_features, avail_actions_next, A, target = False):
+    def cal_Q(self, obs, actions, action_features, avail_actions, A, target = False):
         """
         node_representation
         - training 시        : batch_size X num_nodes X feature_size
@@ -475,39 +482,29 @@ class Agent(nn.Module):
         if target == False:
             action_features = torch.tensor(action_features).to(device=device, dtype=torch.float32)
             action_size = action_features.shape[1]
-            obs = obs.unsqueeze(2)
-            obs = obs.expand([self.batch_size, self.num_agent, action_size, -1])
-
+            mask = avail_actions
             action_features = action_features.reshape(self.batch_size * action_size, -1)
             action_embedding = self.action_representation(action_features)
 
-            action_embedding = action_embedding.reshape(self.batch_size, action_size, -1).unsqueeze(1)
-            action_embedding = action_embedding.expand([self.batch_size, self.num_agent, action_size, -1])
-            obs_and_action = torch.concat([obs, action_embedding], dim=3)
-            obs_and_action = obs_and_action.reshape([self.batch_size*self.num_agent*action_size, -1])
+            action_embedding = action_embedding.reshape(self.batch_size, action_size, -1)
 
-            Q = self.Q(obs_and_action)
-            Q = Q.reshape([self.batch_size,self.num_agent, action_size])
 
+            Q = self.Q(obs, action_embedding, mask)
             actions = torch.tensor(actions, device = device).long()
             act_n = actions.unsqueeze(2)                    # action.shape : (batch_size, num_agent, 1)
             q = torch.gather(Q, 2, act_n)                   # q.shape : (batch_size, num_agent, action_size)
             return q
         else:
             with torch.no_grad():
-                avail_actions_next = torch.tensor(avail_actions_next, device=device).bool()
+                avail_actions_next = torch.tensor(avail_actions, device=device).bool()
                 mask = avail_actions_next
                 action_features = torch.tensor(action_features).to(device=device, dtype=torch.float32)
                 action_size = action_features.shape[1]
-                obs = obs.unsqueeze(2)
-                obs = obs.expand([self.batch_size, self.num_agent, action_size, -1])
                 action_features = action_features.reshape(self.batch_size * action_size, -1)
                 action_embedding = self.action_representation_tar(action_features)
-                action_embedding = action_embedding.reshape(self.batch_size, action_size, -1).unsqueeze(1)
-                action_embedding = action_embedding.expand([self.batch_size, self.num_agent, action_size, -1])
-                obs_and_action = torch.concat([obs, action_embedding], dim=3)
-                obs_and_action = obs_and_action.reshape([self.batch_size * self.num_agent * action_size, -1])
-                Q_tar = self.Q_tar(obs_and_action)
+                action_embedding = action_embedding.reshape(self.batch_size, action_size, -1)
+
+                Q_tar = self.Q_tar(obs, action_embedding, mask)
                 Q_tar = Q_tar.reshape([self.batch_size, self.num_agent, action_size])
                 Q_tar = Q_tar.masked_fill(mask == 0, float('-inf'))
                 Q_tar_max = torch.max(Q_tar, dim=2)[0]
@@ -518,24 +515,20 @@ class Agent(nn.Module):
     @torch.no_grad()
     def sample_action(self, node_representation, action_feature, avail_action, epsilon):
         obs = node_representation
+        mask = torch.tensor(avail_action, device=device).bool()
         action_features = torch.tensor(action_feature).to(device=device, dtype=torch.float32).unsqueeze(0)
         action_size = action_features.shape[1]
-        obs = obs.unsqueeze(2)
-        obs = obs.expand([1, self.num_agent, action_size, -1])
         action_features = action_features.reshape( action_size, -1)
         action_embedding = self.action_representation(action_features)
-        action_embedding = action_embedding.reshape(1, action_size, -1).unsqueeze(1)
-        action_embedding = action_embedding.expand([1, self.num_agent, action_size, -1])
-        obs_and_action = torch.concat([obs, action_embedding], dim=3)
-        obs_and_action = obs_and_action.reshape([1 * self.num_agent * action_size, -1])
-        Q = self.Q(obs_and_action)
+        action_embedding = action_embedding.reshape(1, action_size, -1)
+        Q = self.Q(obs, action_embedding, mask)
         Q = Q.reshape([self.num_agent, action_size])
         """
         node_representation 차원 : n_agents X n_representation_comm
         action_feature 차원      : action_size X n_action_feature
         avail_action 차원        : n_agents X action_size
         """
-        mask = torch.tensor(avail_action, device=device).bool()
+
         Q = Q.masked_fill(mask == 0, float('-inf'))
         action = []
         action_space = [i for i in range(action_size)]
@@ -626,7 +619,9 @@ class Agent(nn.Module):
 
     def learn(self, cum_losses_old, graph_learning_stop):
         self.eval(train = True)
-        node_features, actions, action_features, edge_indices_enemy, edge_indices_ally, rewards, dones, node_features_next, action_features_next, edge_indices_enemy_next, edge_indices_ally_next, avail_actions_next,dead_masking, dead_masking_next, agent_feature, agent_feature_next, sum_state, sum_state_next = self.buffer.sample()
+        node_features, actions, action_features, edge_indices_enemy, \
+        edge_indices_ally, rewards, dones, node_features_next, action_features_next, edge_indices_enemy_next, \
+        edge_indices_ally_next, avail_actions, avail_actions_next, dead_masking, dead_masking_next, agent_feature, agent_feature_next, sum_state, sum_state_next = self.buffer.sample()
         A = edge_indices_ally
         A_next = edge_indices_ally_next
         A = torch.stack(A).to(device)
@@ -666,12 +661,12 @@ class Agent(nn.Module):
         q_tot = self.cal_Q(obs=obs,
                      actions=actions,
                      action_features=action_features,
-                     avail_actions_next=None,
+                     avail_actions=avail_actions,
                      target=False, A= A)
         q_tot_tar = self.cal_Q(obs=obs_next,
                          actions=None,
                          action_features=action_features_next,
-                         avail_actions_next=avail_actions_next,
+                         avail_actions=avail_actions_next,
                          target=True, A=A_next)
 
         var_ = torch.mean(torch.var(q_tot, dim=1))
@@ -683,7 +678,7 @@ class Agent(nn.Module):
         comm_loss = -logits * exp_adv.detach()
         rl_loss = F.mse_loss(q_tot.squeeze(1), td_target.detach())
         graph_loss = gamma1 * lap_quad - gamma2  * sec_eig_upperbound
-        loss = rl_loss +graph_loss+float(os.environ.get("var_reg", 1.0))*var_+comm_loss.mean()#######
+        loss = rl_loss +graph_loss+float(os.environ.get("var_reg", 1.0))*var_#+comm_loss.mean()#######
         #print(rl_loss.shape, graph_loss.shape, var_.shape, comm_loss.shape)
         loss.backward()
         grad_clip = float(os.environ.get("grad_clip", 10))
