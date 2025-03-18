@@ -684,7 +684,7 @@ class Agent(nn.Module):
         comm_loss = -logits * exp_adv.detach()
         rl_loss = F.mse_loss(q_tot.squeeze(1), td_target.detach())
         graph_loss = gamma1 * lap_quad - gamma2  * sec_eig_upperbound
-        loss = rl_loss +graph_loss+float(os.environ.get("var_reg", 1.0))*var_
+        loss = rl_loss +graph_loss+float(os.environ.get("var_reg", 1.0))*var_+comm_loss#######
         loss.backward()
         grad_clip = float(os.environ.get("grad_clip", 10))
         torch.nn.utils.clip_grad_norm_(self.eval_params, grad_clip)
