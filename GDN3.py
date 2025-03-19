@@ -416,7 +416,7 @@ class Agent(nn.Module):
                 node_embedding_obs = self.func_obs(X = node_embedding_obs, A = edge_index_obs)[:, :n_agent,:]
                 cat_embedding = torch.cat([node_embedding_obs, node_embedding_comm], dim=2)
                 A_new, logits = self.func_glcn(cat_embedding)
-                A_new = A_new.unsqueeze(0)
+
                 cat_embedding= self.func_comm(X = cat_embedding, A = A_new, dense = True)
                 cat_embedding = self.func_comm2(X=cat_embedding, A = A_new.detach(),dense=True)
                 return cat_embedding, A_new
@@ -690,7 +690,7 @@ class Agent(nn.Module):
         rl_loss = F.mse_loss(q_tot.squeeze(1), td_target.detach())
         graph_loss = gamma1 * lap_quad - gamma2  * sec_eig_upperbound
         #print(gamma1, gamma2)
-        loss = rl_loss +graph_loss+float(os.environ.get("var_reg", 1.0))*var_#+comm_loss.mean()#######
+        loss = rl_loss +graph_loss+float(os.environ.get("var_reg", 0.5))*var_#+comm_loss.mean()#######
         #print(rl_loss.shape, graph_loss.shape, var_.shape, comm_loss.shape)
         loss.backward()
         grad_clip = float(os.environ.get("grad_clip", 10))
