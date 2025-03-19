@@ -268,10 +268,10 @@ class Agent(nn.Module):
                                                  n_representation_obs=self.n_representation_obs).to(device)  # 수정사항
 
 
-        self.node_representation_comm = NodeEmbedding(feature_size=2*self.feature_size+5,
+        self.node_representation_comm = NodeEmbedding(feature_size=2*self.feature_size+5-1,
                                                       hidden_size=self.hidden_size_comm,
                                                       n_representation_obs=self.n_representation_comm).to(device)
-        self.node_representation_comm_tar = NodeEmbedding(feature_size=2*self.feature_size+5,
+        self.node_representation_comm_tar = NodeEmbedding(feature_size=2*self.feature_size+5-1,
                                                       hidden_size=self.hidden_size_comm,
                                                       n_representation_obs=self.n_representation_comm).to(device)
 

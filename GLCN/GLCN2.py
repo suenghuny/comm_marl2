@@ -145,7 +145,7 @@ class GAT(nn.Module):
         #E = self.dropout(E)
         attention = torch.where(E > 0, E*e, zero_vec)
         attention = F.softmax(attention, dim=2)
-        attention = self.dropout(attention)
+        #attention = self.dropout(attention)
         H = F.elu(torch.matmul(attention, Wh))
         #H = self.dropout(H)
         return H
