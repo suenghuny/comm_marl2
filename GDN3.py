@@ -415,7 +415,7 @@ class Agent(nn.Module):
                 edge_index_obs = torch.tensor(edge_index_obs).long().to(device).unsqueeze(0)
                 node_embedding_obs = self.func_obs(X = node_embedding_obs, A = edge_index_obs)[:, :n_agent,:]
                 cat_embedding = torch.cat([node_embedding_obs, node_embedding_comm], dim=2)
-                A_new, logits = self.func_glcn(cat_embedding)
+                A_new, logits = self.func_glcn(cat_embedding, rollout = True)
 
                 cat_embedding= self.func_comm(X = cat_embedding, A = A_new, dense = True)
                 cat_embedding = self.func_comm2(X=cat_embedding, A = A_new.detach(),dense=True)
@@ -517,7 +517,7 @@ class Agent(nn.Module):
 
                 Q_tar = self.Q_tar(obs_and_action)
                 Q_tar = Q_tar.reshape([self.batch_size, self.num_agent, action_size])
-                
+
                 Q_tar = Q_tar.masked_fill(mask == 0, float('-inf'))
                 Q_tar_max = torch.max(Q_tar, dim=2)[0]
                 return Q_tar_max
