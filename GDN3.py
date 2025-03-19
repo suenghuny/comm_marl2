@@ -268,10 +268,10 @@ class Agent(nn.Module):
                                                  n_representation_obs=self.n_representation_obs).to(device)  # 수정사항
 
 
-        self.node_representation_comm = NodeEmbedding(feature_size=self.feature_size,
+        self.node_representation_comm = NodeEmbedding(feature_size=2*self.feature_size+5,
                                                       hidden_size=self.hidden_size_comm,
                                                       n_representation_obs=self.n_representation_comm).to(device)
-        self.node_representation_comm_tar = NodeEmbedding(feature_size=self.feature_size,
+        self.node_representation_comm_tar = NodeEmbedding(feature_size=2*self.feature_size+5,
                                                       hidden_size=self.hidden_size_comm,
                                                       n_representation_obs=self.n_representation_comm).to(device)
 
@@ -291,15 +291,15 @@ class Agent(nn.Module):
                                                        n_representation_obs=self.n_representation_action).to(device)  # 수정사항
 
 
-        self.func_obs = GAT2(feature_size=self.n_representation_obs, graph_embedding_size=self.graph_embedding).to(device)
-        self.func_obs_tar = GAT2(feature_size=self.n_representation_obs, graph_embedding_size=self.graph_embedding).to(device)
+        self.func_obs = GAT(feature_size=self.n_representation_obs, graph_embedding_size=self.graph_embedding).to(device)
+        self.func_obs_tar = GAT(feature_size=self.n_representation_obs, graph_embedding_size=self.graph_embedding).to(device)
 
-        self.func_comm = GAT2(feature_size=self.graph_embedding+n_representation_comm, graph_embedding_size=self.graph_embedding_comm).to(device)
-        self.func_comm_tar = GAT2(feature_size=self.graph_embedding+n_representation_comm, graph_embedding_size=self.graph_embedding_comm).to(device)
+        self.func_comm = GAT(feature_size=self.graph_embedding+n_representation_comm, graph_embedding_size=self.graph_embedding_comm).to(device)
+        self.func_comm_tar = GAT(feature_size=self.graph_embedding+n_representation_comm, graph_embedding_size=self.graph_embedding_comm).to(device)
 
-        self.func_comm2 = GAT2(feature_size=self.graph_embedding_comm,
+        self.func_comm2 = GAT(feature_size=self.graph_embedding_comm,
                              graph_embedding_size=self.graph_embedding_comm).to(device)
-        self.func_comm2_tar = GAT2(feature_size=self.graph_embedding_comm,
+        self.func_comm2_tar = GAT(feature_size=self.graph_embedding_comm,
                                  graph_embedding_size=self.graph_embedding_comm).to(device)
 
 
@@ -539,18 +539,24 @@ class Agent(nn.Module):
         Q = Q.masked_fill(mask == 0, float('-inf'))
         action = []
         action_space = [i for i in range(action_size)]
+        action_history = torch.zeros([self.num_agent, self.feature_size+5])
         for n in range(self.num_agent):
 
             greedy_u = torch.argmax(Q[n,:])
             mask_n = np.array(avail_action[n], dtype=np.float64)
+
             if np.random.uniform(0, 1) >= epsilon:
                 u = greedy_u
                 action.append(u.item())
+                action_history[n, :] = action_features[u.item(), :]
+
 
             else:
                 u = np.random.choice(action_space, p=mask_n / np.sum(mask_n))
                 action.append(u)
-        return action
+                action_history[n,:] = action_features[u,:]
+
+        return action, action_history
 
     # @torch.no_grad()
     # def sample_action(self, node_representation, action_feature, avail_action, epsilon):
@@ -683,7 +689,8 @@ class Agent(nn.Module):
         comm_loss = -logits * exp_adv.detach()
         rl_loss = F.mse_loss(q_tot.squeeze(1), td_target.detach())
         graph_loss = gamma1 * lap_quad - gamma2  * sec_eig_upperbound
-        loss = rl_loss +graph_loss+float(os.environ.get("var_reg", 1.0))*var_+comm_loss.mean()#######
+        #print(gamma1, gamma2)
+        loss = rl_loss +graph_loss+float(os.environ.get("var_reg", 1.0))*var_#+comm_loss.mean()#######
         #print(rl_loss.shape, graph_loss.shape, var_.shape, comm_loss.shape)
         loss.backward()
         grad_clip = float(os.environ.get("grad_clip", 10))

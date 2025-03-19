@@ -26,7 +26,7 @@ def sample_adjacency_matrix(weight_matrix):
     return adjacency_matrix
 
 
-def gumbel_sigmoid(logits: Tensor, tau: float = 1.0, hard: bool = True, threshold: float = 0.5,
+def gumbel_sigmoid(logits: Tensor, tau: float = 1.4, hard: bool = True, threshold: float = 0.5,
                    mini_batch: bool = False) -> Tensor:
     gumbels = (
         -torch.empty_like(logits, memory_format=torch.legacy_contiguous_format).exponential_().log()
@@ -139,6 +139,7 @@ class GAT(nn.Module):
             E = A
         Wh = X @ self.Ws  # [batch_size, num_nodes, graph_embedding_size]
         e = self._prepare_attentional_mechanism_input(Wh, Wh)
+
         zero_vec = -9e15 * torch.ones_like(E)
         attention = torch.where(E > 0, E*e, zero_vec)
         attention = F.softmax(attention, dim=2)
@@ -187,7 +188,12 @@ class GLCN(nn.Module):
         masked_probs = selected_probs.masked_select(mask).view(batch_size, -1)
         probs = masked_probs + 1e-8  # 수치적 안정성을 위한 작은 값 추가
         probs = torch.log(probs).sum(dim=1)
-        A = A * mask
+
+        batched_diag_matrices = torch.zeros_like(A)
+        for i in range(batch_size):
+            batched_diag_matrices[i,:,:]=torch.diag(torch.diag(A[i]))
+
+        A = A - batched_diag_matrices
         I = torch.eye(h.shape[1])
         batch_identity = I.repeat(batch_size, 1, 1).to(device)
         A = A + batch_identity
