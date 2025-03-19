@@ -26,22 +26,28 @@ def sample_adjacency_matrix(weight_matrix):
     return adjacency_matrix
 
 
-def gumbel_sigmoid(logits: Tensor, tau: float = 1.4, hard: bool = True, threshold: float = 0.5,
+def gumbel_sigmoid(logits: Tensor, tau: float = 1.0, hard: bool = True, threshold: float = 0.5,
                    mini_batch: bool = False, rollout = False,
                     start_noise_scale = None, decay_rate = None, current_step = None, min_noise_scale = None
                    ) -> Tensor:
 
 
-    if rollout == False:
-        noise_scale = max(start_noise_scale - decay_rate * current_step, min_noise_scale)
-        gumbels = (
-            -torch.empty_like(logits, memory_format=torch.legacy_contiguous_format).exponential_().log()
-        )
-        print(logits.shape, noise_scale, current_step)
-        gumbels = (logits + gumbels*noise_scale) / tau  # ~Gumbel(logits, tau)
-    else:
-        gumbels = logits / tau
+    # if rollout == False:
+    #     noise_scale = max(start_noise_scale - decay_rate * current_step, min_noise_scale)
+    #     gumbels = (
+    #         -torch.empty_like(logits, memory_format=torch.legacy_contiguous_format).exponential_().log()
+    #     )
+    #     #print(logits.shape, noise_scale, current_step)
+    #     gumbels = (logits + gumbels*noise_scale) / tau  # ~Gumbel(logits, tau)
+    # else:
+    #     gumbels = logits / tau
 
+
+    gumbels = (
+        -torch.empty_like(logits, memory_format=torch.legacy_contiguous_format).exponential_().log()
+    )
+    #print(logits.shape, noise_scale, current_step)
+    gumbels = (logits + gumbels) / tau  # ~Gumbel(logits, tau)
     y_soft = gumbels.sigmoid()
     logits_for_improvements = y_soft
     if hard:
@@ -197,6 +203,7 @@ class GLCN(nn.Module):
     def forward(self, h, rollout = False):
         h = h[:, :, :self.feature_obs_size].detach()
         h = torch.einsum("bijk,kl->bijl", torch.abs(h.unsqueeze(2) - h.unsqueeze(1)), self.a_link)
+
         h = h.squeeze(3)
         if rollout == False:
             self.current_step += 1
