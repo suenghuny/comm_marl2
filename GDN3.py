@@ -480,9 +480,10 @@ class Agent(nn.Module):
 
             action_features = action_features.reshape(self.batch_size * action_size, -1)
             action_embedding = self.action_representation(action_features)
-
             action_embedding = action_embedding.reshape(self.batch_size, action_size, -1).unsqueeze(1)
             action_embedding = action_embedding.expand([self.batch_size, self.num_agent, action_size, -1])
+
+
             obs_and_action = torch.concat([obs, action_embedding], dim=3)
             obs_and_action = obs_and_action.reshape([self.batch_size*self.num_agent*action_size, -1])
 
@@ -497,18 +498,26 @@ class Agent(nn.Module):
             with torch.no_grad():
                 avail_actions_next = torch.tensor(avail_actions_next, device=device).bool()
                 mask = avail_actions_next
+
                 action_features = torch.tensor(action_features).to(device=device, dtype=torch.float32)
                 action_size = action_features.shape[1]
                 obs = obs.unsqueeze(2)
                 obs = obs.expand([self.batch_size, self.num_agent, action_size, -1])
+
+
                 action_features = action_features.reshape(self.batch_size * action_size, -1)
                 action_embedding = self.action_representation_tar(action_features)
                 action_embedding = action_embedding.reshape(self.batch_size, action_size, -1).unsqueeze(1)
                 action_embedding = action_embedding.expand([self.batch_size, self.num_agent, action_size, -1])
+
+
+
                 obs_and_action = torch.concat([obs, action_embedding], dim=3)
                 obs_and_action = obs_and_action.reshape([self.batch_size * self.num_agent * action_size, -1])
+
                 Q_tar = self.Q_tar(obs_and_action)
                 Q_tar = Q_tar.reshape([self.batch_size, self.num_agent, action_size])
+                
                 Q_tar = Q_tar.masked_fill(mask == 0, float('-inf'))
                 Q_tar_max = torch.max(Q_tar, dim=2)[0]
                 return Q_tar_max
@@ -555,6 +564,7 @@ class Agent(nn.Module):
                 u = np.random.choice(action_space, p=mask_n / np.sum(mask_n))
                 action.append(u)
                 action_history[n,:] = action_features[u,:]
+
 
         return action, action_history
 

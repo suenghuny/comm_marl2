@@ -1264,6 +1264,7 @@ class StarCraft2Env(MultiAgentEnv):
             alliance_feats = np.ones(1,  dtype=np.float32)
 
         node_feature = np.concatenate((unit_type_feats, move_avail_feats, pos_feats, health_and_shield_feats, alliance_feats))
+        #print(unit_type_feats.shape, move_avail_feats.shape, pos_feats.shape, health_and_shield_feats.shape, alliance_feats.shape)
         node_feature = node_feature.tolist()
 
         return node_feature
