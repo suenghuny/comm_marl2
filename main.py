@@ -80,6 +80,7 @@ def evaluation(env, agent, num_eval):
         done = False
         episode_reward = 0
         step = 0
+        #action_history = torch.zeros([num_agent, env.get_env_info()["node_features"] + 5])
         action_history = torch.zeros([num_agent, env.get_env_info()["node_features"] + 5])
         while (not done) and (step < max_episode_len):
             step += 1
@@ -87,6 +88,10 @@ def evaluation(env, agent, num_eval):
             sum_state = env.get_summarized_state()
             avail_action = env.get_avail_actions()
             agent_feature = torch.tensor(node_feature, dtype = torch.float)[:num_agent, :]#torch.concat([torch.tensor(sum_state, dtype = torch.float).repeat(num_agent, 1), torch.tensor(node_feature, dtype = torch.float)[:num_agent, :-1]],dim=1)
+            agent_feature = torch.cat([agent_feature, action_history], dim = 1)
+
+
+
             n_agent = len(avail_action)
 
             node_representation, A = agent.get_node_representation_temp(
@@ -96,8 +101,9 @@ def evaluation(env, agent, num_eval):
                                                                 n_agent=n_agent,
                                                                 mini_batch=False,)
 
-            action_feature = env.get_action_feature()  # 차원 : action_size X n_action_feature
-            action = agent.sample_action(node_representation, action_feature, avail_action, epsilon=0)
+            action_feature = env.get_action_feature()  # 차원 : action_size X n_action_featuredafasd
+
+            action, action_history = agent.sample_action(node_representation, action_feature, avail_action, epsilon=0)
             reward, done, info = env.step(action)
             win_tag = True if done and 'battle_won' in info and info['battle_won'] else False
             episode_reward += reward
@@ -132,6 +138,7 @@ def train(agent, env, e, t, train_start, epsilon, min_epsilon, anneal_epsilon, i
     save = True
     cum_losses = list()
     comm_losses = list()
+    action_history = torch.zeros([num_agent, env.get_env_info()["node_features"] + 5])
     while (not done) and (step < max_episode_limit):
         """
         Note: edge index 추출에 세가지 방법
@@ -140,7 +147,10 @@ def train(agent, env, e, t, train_start, epsilon, min_epsilon, anneal_epsilon, i
         """
         node_feature, edge_index_enemy, edge_index_ally, _, dead_masking = env.get_heterogeneous_graph(heterogeneous=heterogenous)
         sum_state = env.get_summarized_state()
-        agent_feature = torch.tensor(node_feature, dtype = torch.float)[:num_agent, :]#torch.concat([torch.tensor(sum_state, dtype = torch.float).repeat(num_agent, 1), torch.tensor(node_feature, dtype = torch.float)[:num_agent, :-1]],dim=1)
+        agent_feature = torch.tensor(node_feature, dtype=torch.float)[:num_agent,
+                        :]  # torch.concat([torch.tensor(sum_state, dtype = torch.float).repeat(num_agent, 1), torch.tensor(node_feature, dtype = torch.float)[:num_agent, :-1]],dim=1)
+        agent_feature = torch.cat([agent_feature, action_history], dim=1)
+
         avail_action = env.get_avail_actions()
         n_agent = len(avail_action)
 
@@ -151,7 +161,7 @@ def train(agent, env, e, t, train_start, epsilon, min_epsilon, anneal_epsilon, i
             n_agent=n_agent,
             mini_batch=False)
         action_feature = env.get_action_feature()  # 차원 : action_size X n_action_feature
-        action = agent.sample_action(node_representation, action_feature, avail_action, epsilon)
+        action, action_history = agent.sample_action(node_representation, action_feature, avail_action, epsilon)
         reward, done, info = env.step(action)
         agent.buffer.memory(node_feature, action, action_feature, edge_index_enemy, A, reward,
                             done, avail_action, dead_masking, agent_feature.tolist(), sum_state)
@@ -217,8 +227,8 @@ def main():
     learning_rate_graph = learning_rate  # cfg.lr
     num_episode = 500000 #cfg.num_episode
     train_start = int(os.environ.get("train_start", 10))# cfg.train_start
-    epsilon = float(os.environ.get("epsilon", 1))#cfg.epsilon
-    min_epsilon = float(os.environ.get("min_epsilon", 0.05)) #cfg.min_epsilon
+    epsilon = float(os.environ.get("epsilon", 0.5))#cfg.epsilon
+    min_epsilon = float(os.environ.get("min_epsilon", 0.1)) #cfg.min_epsilon
     anneal_steps = int(os.environ.get("anneal_steps", 50000))#cfg.anneal_steps
     gamma1 = cfg.gamma1
     gamma2 = cfg.gamma2

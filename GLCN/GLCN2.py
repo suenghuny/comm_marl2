@@ -115,6 +115,7 @@ class GAT(nn.Module):
         glorot(self.Ws)
         self.a = nn.Parameter(torch.empty(size=(2 * graph_embedding_size, 1)))
         nn.init.xavier_uniform_(self.a.data, gain=1.414)
+        #self.dropout = nn.Dropout(0.4)
 
     def _prepare_attentional_mechanism_input(self, Wq, Wv):
         Wh1 = Wq
@@ -141,9 +142,11 @@ class GAT(nn.Module):
         e = self._prepare_attentional_mechanism_input(Wh, Wh)
 
         zero_vec = -9e15 * torch.ones_like(E)
+        #E = self.dropout(E)
         attention = torch.where(E > 0, E*e, zero_vec)
         attention = F.softmax(attention, dim=2)
         H = F.elu(torch.matmul(attention, Wh))
+        #H = self.dropout(H)
         return H
 
 
