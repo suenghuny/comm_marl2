@@ -27,26 +27,10 @@ def sample_adjacency_matrix(weight_matrix):
 
 
 def gumbel_sigmoid(logits: Tensor, tau: float = 1.0, hard: bool = True, threshold: float = 0.5,
-                   mini_batch: bool = False, rollout = False,
-                    start_noise_scale = None, decay_rate = None, current_step = None, min_noise_scale = None
-                   ) -> Tensor:
-
-
-    # if rollout == False:
-    #     noise_scale = max(start_noise_scale - decay_rate * current_step, min_noise_scale)
-    #     gumbels = (
-    #         -torch.empty_like(logits, memory_format=torch.legacy_contiguous_format).exponential_().log()
-    #     )
-    #     #print(logits.shape, noise_scale, current_step)
-    #     gumbels = (logits + gumbels*noise_scale) / tau  # ~Gumbel(logits, tau)
-    # else:
-    #     gumbels = logits / tau
-
-
+                   mini_batch: bool = False) -> Tensor:
     gumbels = (
         -torch.empty_like(logits, memory_format=torch.legacy_contiguous_format).exponential_().log()
     )
-    #print(logits.shape, noise_scale, current_step)
     gumbels = (logits + gumbels) / tau  # ~Gumbel(logits, tau)
     y_soft = gumbels.sigmoid()
     logits_for_improvements = y_soft
@@ -177,11 +161,6 @@ class GLCN(nn.Module):
         self.a_link = nn.Parameter(torch.empty(size=(self.feature_obs_size, 1)))
         nn.init.xavier_uniform_(self.a_link.data, gain=1.414)
 
-        self.start_noise_scale = 1.0
-        self.decay_rate = 0.000003
-        self.current_step = 0
-        self.min_noise_scale = 0.1
-
     # def cal_log_prob(self, h):
     #     h = h[:, :, :self.feature_obs_size].detach()
     #     h = torch.einsum("bijk,kl->bijl", torch.abs(h.unsqueeze(2) - h.unsqueeze(1)), self.a_link)
@@ -200,19 +179,11 @@ class GLCN(nn.Module):
     #     A = A + batch_identity
     #     return A, probs
 
-    def forward(self, h, rollout = False):
+    def forward(self, h):
         h = h[:, :, :self.feature_obs_size].detach()
         h = torch.einsum("bijk,kl->bijl", torch.abs(h.unsqueeze(2) - h.unsqueeze(1)), self.a_link)
-
         h = h.squeeze(3)
-        if rollout == False:
-            self.current_step += 1
-        A, logits_for_improvements = gumbel_sigmoid(h, mini_batch=True, rollout = rollout,
-                                                    start_noise_scale=self.start_noise_scale,
-                                                    decay_rate=self.decay_rate,
-                                                    current_step=self.current_step,
-                                                    min_noise_scale=self.min_noise_scale
-                                                    )
+        A, logits_for_improvements = gumbel_sigmoid(h, mini_batch=True)
         batch_size, n, n = logits_for_improvements.shape
         mask = ~torch.eye(n, dtype=torch.bool, device=logits_for_improvements.device).unsqueeze(0).expand(
             batch_size, -1, -1)

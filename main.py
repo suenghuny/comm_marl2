@@ -88,7 +88,7 @@ def evaluation(env, agent, num_eval):
             sum_state = env.get_summarized_state()
             avail_action = env.get_avail_actions()
             agent_feature = torch.tensor(node_feature, dtype = torch.float)[:num_agent, :-1]#torch.concat([torch.tensor(sum_state, dtype = torch.float).repeat(num_agent, 1), torch.tensor(node_feature, dtype = torch.float)[:num_agent, :-1]],dim=1)
-            #agent_feature = torch.cat([agent_feature, action_history], dim = 1)
+            agent_feature = torch.cat([agent_feature, action_history], dim = 1)
             n_agent = len(avail_action)
 
             node_representation, A = agent.get_node_representation_temp(
@@ -145,11 +145,10 @@ def train(agent, env, e, t, train_start, epsilon, min_epsilon, anneal_epsilon, i
         node_feature, edge_index_enemy, edge_index_ally, _, dead_masking = env.get_heterogeneous_graph(heterogeneous=heterogenous)
         sum_state = env.get_summarized_state()
         agent_feature = torch.tensor(node_feature, dtype=torch.float)[:num_agent, :-1]  # torch.concat([torch.tensor(sum_state, dtype = torch.float).repeat(num_agent, 1), torch.tensor(node_feature, dtype = torch.float)[:num_agent, :-1]],dim=1)
-        #agent_feature = torch.cat([agent_feature, action_history], dim=1)
+        agent_feature = torch.cat([agent_feature, action_history], dim=1)
 
         avail_action = env.get_avail_actions()
         n_agent = len(avail_action)
-        #print(np.array(node_feature).shape)
         node_representation, A = agent.get_node_representation_temp(
             node_feature,
             agent_feature,
