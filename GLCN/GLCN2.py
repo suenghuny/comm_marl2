@@ -168,7 +168,7 @@ class GLCN(nn.Module):
         super(GLCN, self).__init__()
         self.graph_embedding_size = graph_embedding_size
         self.feature_obs_size = feature_obs_size
-        self.d_k = 128
+        self.d_k = 64
 
         self.a_link = nn.Parameter(torch.empty(size=(self.feature_obs_size, self.d_k)))
         self.b_link = nn.Parameter(torch.empty(size=(self.feature_obs_size, self.d_k)))
