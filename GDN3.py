@@ -400,7 +400,7 @@ class Agent(nn.Module):
                 edge_index_obs = torch.tensor(edge_index_obs).long().to(device).unsqueeze(0)
                 node_embedding_obs = self.func_obs(X=node_embedding_obs, A=edge_index_obs)[:, :n_agent, :]
                 cat_embedding = torch.cat([node_embedding_obs, node_embedding_comm], dim=2)
-                A_new, logits = self.func_glcn(cat_embedding)
+                A_new, logits = self.func_glcn(cat_embedding, rollout = True)
 
                 cat_embedding = self.func_comm(X=cat_embedding, A=A_new, dense=True)
                 cat_embedding = self.func_comm2(X=cat_embedding, A=A_new.detach(), dense=True)
@@ -420,7 +420,7 @@ class Agent(nn.Module):
                 node_embedding_comm = node_embedding_comm.reshape(batch_size, num_agents, -1)
                 node_embedding_obs = self.func_obs(X=node_embedding_obs, A=edge_index_obs)[:, :n_agent, :]
                 cat_embedding = torch.cat([node_embedding_obs, node_embedding_comm], dim=2)
-                A_new, logits = self.func_glcn(cat_embedding)
+                A_new, logits = self.func_glcn(cat_embedding, rollout = False)
                 cat_embedding = self.func_comm(X=cat_embedding, A=A_new, dense=True)
                 cat_embedding = self.func_comm2(X=cat_embedding, A=A_new.detach(), dense=True)
                 return cat_embedding, A_new, logits
@@ -442,7 +442,7 @@ class Agent(nn.Module):
 
                     node_embedding_obs = self.func_obs_tar(X=node_embedding_obs, A=edge_index_obs)[:, :n_agent, :]
                     cat_embedding = torch.cat([node_embedding_obs, node_embedding_comm], dim=2)
-                    A_new, logits = self.func_glcn(cat_embedding)
+                    A_new, logits = self.func_glcn(cat_embedding, rollout = True)
                     cat_embedding = self.func_comm_tar(X=cat_embedding, A=A_new, dense=True)
                     cat_embedding = self.func_comm2_tar(X=cat_embedding, A=A_new, dense=True)
                     return cat_embedding
