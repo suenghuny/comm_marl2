@@ -23,7 +23,7 @@ if vessl_on == True:
 else:
     import wandb
     wandb.login()
-    wandb.init(project="second-eigen", name="experiment-1_noise_annealing_with_cosine_distance_with_kl_penalty_64")
+    wandb.init(project="second-eigen", name="experiment-1_noise_annealing_reverse_with_kl_penalty")
 
 
     output_dir = "output/"

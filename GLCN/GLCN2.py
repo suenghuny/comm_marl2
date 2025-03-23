@@ -168,16 +168,14 @@ class GLCN(nn.Module):
         super(GLCN, self).__init__()
         self.graph_embedding_size = graph_embedding_size
         self.feature_obs_size = feature_obs_size
-        self.d_k = 64
-
-        self.a_link = nn.Parameter(torch.empty(size=(self.feature_obs_size, self.d_k)))
-        self.b_link = nn.Parameter(torch.empty(size=(self.feature_obs_size, self.d_k)))
+        self.a_link = nn.Parameter(torch.empty(size=(self.feature_obs_size, 1)))
         nn.init.xavier_uniform_(self.a_link.data, gain=1.414)
 
         self.start_factor = 1.0
         self.step = 0
         self.decaying_factor = 0.00003
         self.min_factor = 0.05
+
 
     # def cal_log_prob(self, h):
     #     h = h[:, :, :self.feature_obs_size].detach()
@@ -197,13 +195,13 @@ class GLCN(nn.Module):
     #     A = A + batch_identity
     #     return A, probs
 
-    def forward(self, h, rollout):
+    def forward(self, h, rollout, check = False):
         if rollout==False:
-            self.step +=1
+            if check == False:
+                self.step +=1
         h = h[:, :, :self.feature_obs_size].detach()
-        h_i = torch.einsum("bik,kl->bil", h, self.a_link)
-        h_j = torch.einsum("bjk,kl->bjl", h, self.b_link)
-        h = torch.einsum("bil,bjl->bij", h_i, h_j)/self.d_k**0.5
+        h = torch.einsum("bijk,kl->bijl", torch.abs(h.unsqueeze(2) - h.unsqueeze(1)), self.a_link)
+        h = h.squeeze(3)
         A, logits_for_improvements = gumbel_sigmoid(h, mini_batch=True, rollout=rollout,
                                                     start_factor=self.start_factor,
                                                     step = self.step,
