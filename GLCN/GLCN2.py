@@ -117,6 +117,121 @@ class GAT2(nn.Module):
         H = self.dropout(H)
         return H
 
+
+class GIN(nn.Module):
+    """
+    Graph Isomorphism Network (GIN) 구현
+
+    GIN 레이어는 다음 수식을 기반으로 합니다:
+    h_i^(k+1) = MLP^(k)((1 + ε^(k)) · h_i^(k) + ∑_{j∈N(i)} h_j^(k))
+    """
+
+    def __init__(self, feature_size, graph_embedding_size, num_layers=2, eps=0, train_eps=True):
+        super(GIN, self).__init__()
+
+        self.num_layers = num_layers
+        self.mlps = nn.ModuleList()
+        self.batch_norms = nn.ModuleList()
+
+        # 학습 가능한 epsilon 파라미터 (논문의 ε)
+        if train_eps:
+            self.eps = nn.Parameter(torch.Tensor([eps]))
+        else:
+            self.eps = eps
+
+        # 첫 번째 레이어
+        self.mlps.append(self.create_mlp(feature_size, graph_embedding_size))
+        self.batch_norms.append(nn.BatchNorm1d(graph_embedding_size))
+
+        # 중간 레이어들
+        for i in range(num_layers - 2):
+            self.mlps.append(self.create_mlp(graph_embedding_size, graph_embedding_size))
+            self.batch_norms.append(nn.BatchNorm1d(graph_embedding_size))
+
+        # 마지막 레이어
+        self.mlps.append(self.create_mlp(graph_embedding_size, graph_embedding_size))
+        self.batch_norms.append(nn.BatchNorm1d(graph_embedding_size))
+
+    def create_mlp(self, in_dim, out_dim):
+        """2층 MLP 생성"""
+        return nn.Sequential(
+            nn.Linear(in_dim, out_dim),
+            nn.ReLU(),
+            nn.Linear(out_dim, out_dim)
+        )
+
+    def forward(self, X, A, dense = False):
+        """
+        X: 노드 특성 행렬 [batch_size, num_nodes, input_dim] 또는 [num_nodes, input_dim]
+        A: 인접 행렬 [batch_size, num_nodes, num_nodes] 또는 [num_nodes, num_nodes]
+        """
+        batch_size, num_nodes, feature_size = X.shape
+        if dense == False:
+            A = torch.stack([
+                torch.sparse_coo_tensor(
+                    torch.tensor(A[b], dtype=torch.long).to(device),
+                    torch.ones(torch.tensor(A[b]).shape[1]).to(device),
+                    (num_nodes, num_nodes)
+                ).to_dense()
+                for b in range(batch_size)
+            ], dim=0)
+        else:
+            A = A
+
+        # 배치 차원 처리
+        if X.dim() == 2:
+            X = X.unsqueeze(0)  # [num_nodes, input_dim] -> [1, num_nodes, input_dim]
+
+        if A.dim() == 2:
+            A = A.unsqueeze(0)  # [num_nodes, num_nodes] -> [1, num_nodes, num_nodes]
+
+        # 자기 루프 추가 (필요한 경우)
+        # self_loop = torch.eye(A.size(1), device=A.device).unsqueeze(0).expand_as(A)
+        # A = A + self_loop  # 자기 루프가 이미 있는 경우 주석 처리
+
+        h = X
+
+        # GIN 레이어 적용
+        for i in range(self.num_layers):
+            # 이웃 노드 특성의 합 계산
+            neighbor_sum = torch.bmm(A, h)
+
+            # GIN 업데이트 규칙 적용: (1 + ε) * h_i + ∑_{j∈N(i)} h_j
+            h = (1 + self.eps) * h + neighbor_sum
+
+            # MLP와 배치 정규화 적용
+            batch_size, num_nodes, feat_dim = h.size()
+            h = h.view(-1, feat_dim)  # [batch_size * num_nodes, feat_dim]
+            h = self.mlps[i](h)
+            h = F.relu(h)
+            h = h.view(batch_size, num_nodes, -1)  # 원래 형태로 복원
+
+        return h
+
+    def predict(self, X, A):
+        """
+        노드 분류를 위한 예측 함수
+        """
+        logits = self.forward(X, A)
+        return F.log_softmax(logits, dim=2)
+
+    def graph_pooling(self, h, batch_index, pooling_type="mean"):
+        """
+        그래프 분류를 위한 그래프 풀링 함수
+        batch_index: 각 노드가 속한 그래프의 인덱스 [num_nodes]
+        pooling_type: 'sum', 'mean', 'max' 중 하나
+        """
+        if h.dim() == 3:  # [batch_size, num_nodes, feat_dim]
+            if pooling_type == "sum":
+                return h.sum(dim=1)
+            elif pooling_type == "mean":
+                return h.mean(dim=1)
+            elif pooling_type == "max":
+                return h.max(dim=1)[0]
+        else:
+            raise NotImplementedError("배치 처리된 그래프 풀링은 구현되지 않았습니다.")
+
+
 class GAT(nn.Module):
     def __init__(self, feature_size, graph_embedding_size):
         super(GAT, self).__init__()
@@ -152,12 +267,9 @@ class GAT(nn.Module):
         e = self._prepare_attentional_mechanism_input(Wh, Wh)
 
         zero_vec = -9e15 * torch.ones_like(E)
-        #E = self.dropout(E)
         attention = torch.where(E > 0, E*e, zero_vec)
         attention = F.softmax(attention, dim=2)
-        #attention = self.dropout(attention)
         H = F.elu(torch.matmul(attention, Wh))
-        #H = self.dropout(H)
         return H
 
 
@@ -173,7 +285,7 @@ class GLCN(nn.Module):
 
         self.start_factor = 1.0
         self.step = 0
-        self.decaying_factor = 0.00003
+        self.decaying_factor = 0.000003
         self.min_factor = 0.05
 
 
@@ -197,7 +309,7 @@ class GLCN(nn.Module):
 
     def forward(self, h, rollout, check = False):
         if rollout==False:
-            if check == False:
+            if check == True:
                 self.step +=1
         h = h[:, :, :self.feature_obs_size].detach()
         h = torch.einsum("bijk,kl->bijl", torch.abs(h.unsqueeze(2) - h.unsqueeze(1)), self.a_link)

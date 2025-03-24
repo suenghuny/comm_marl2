@@ -1,7 +1,7 @@
 import pandas as pd
 from utils import *
 from smac_rev import StarCraft2Env
-from GDN3 import Agent
+from GDN4 import Agent
 from functools import partial
 import numpy as np
 import sys
@@ -23,7 +23,7 @@ if vessl_on == True:
 else:
     import wandb
     wandb.login()
-    wandb.init(project="second-eigen", name="noise_annealing_all_time_with_kl_penalty")
+    wandb.init(project="second-eigen", name="GIN_noise_annealing_reverse_with_kl_penalty")
 
 
     output_dir = "output/"
@@ -216,7 +216,7 @@ def main():
     graph_embedding = cfg.graph_embedding
     graph_embedding_comm =  cfg.graph_embedding_comm
     buffer_size = int(os.environ.get("buffer_size", 100000))       # cfg.buffer_size
-    batch_size = int(os.environ.get("batch_size", 24))             # cfg.batch_size
+    batch_size = int(os.environ.get("batch_size", 32))             # cfg.batch_size
     gamma = 0.99      ##                                                      # cfg.gamma
     learning_rate = cfg.lr      # cfg.lr
     learning_rate_graph = learning_rate  # cfg.lr
@@ -224,7 +224,7 @@ def main():
     train_start = int(os.environ.get("train_start", 10))# cfg.train_start
     epsilon = float(os.environ.get("epsilon", 1.0))#cfg.epsilon
     min_epsilon = float(os.environ.get("min_epsilon", 0.025)) #cfg.min_epsilon
-    anneal_steps = int(os.environ.get("anneal_steps", 50000))#cfg.anneal_steps
+    anneal_steps = int(os.environ.get("anneal_steps", 100000))#cfg.anneal_steps
     gamma1 = cfg.gamma1
     gamma2 = cfg.gamma2
     min_gamma2 = 10.0

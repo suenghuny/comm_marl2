@@ -11,7 +11,7 @@ import pickle
 from collections import deque
 from torch.distributions import Categorical
 import numpy as np
-from GLCN.GLCN2 import GLCN, GAT2, GAT
+from GLCN.GLCN2 import GLCN, GAT2, GAT, GIN
 from cfg import get_cfg
 
 cfg = get_cfg()
@@ -279,19 +279,19 @@ class Agent(nn.Module):
                                                            n_representation_obs=self.n_representation_action).to(
                 device)  # 수정사항
 
-        self.func_obs = GAT(feature_size=self.n_representation_obs, graph_embedding_size=self.graph_embedding).to(
+        self.func_obs = GIN(feature_size=self.n_representation_obs, graph_embedding_size=self.graph_embedding).to(
             device)
-        self.func_obs_tar = GAT(feature_size=self.n_representation_obs, graph_embedding_size=self.graph_embedding).to(
+        self.func_obs_tar = GIN(feature_size=self.n_representation_obs, graph_embedding_size=self.graph_embedding).to(
             device)
 
-        self.func_comm = GAT(feature_size=self.graph_embedding + n_representation_comm,
+        self.func_comm = GIN(feature_size=self.graph_embedding + n_representation_comm,
                              graph_embedding_size=self.graph_embedding_comm).to(device)
-        self.func_comm_tar = GAT(feature_size=self.graph_embedding + n_representation_comm,
+        self.func_comm_tar = GIN(feature_size=self.graph_embedding + n_representation_comm,
                                  graph_embedding_size=self.graph_embedding_comm).to(device)
 
-        self.func_comm2 = GAT(feature_size=self.graph_embedding_comm,
+        self.func_comm2 = GIN(feature_size=self.graph_embedding_comm,
                               graph_embedding_size=self.graph_embedding_comm).to(device)
-        self.func_comm2_tar = GAT(feature_size=self.graph_embedding_comm,
+        self.func_comm2_tar = GIN(feature_size=self.graph_embedding_comm,
                                   graph_embedding_size=self.graph_embedding_comm).to(device)
 
         self.func_glcn = GLCN(feature_size=self.graph_embedding + self.n_representation_comm,
@@ -403,7 +403,7 @@ class Agent(nn.Module):
                 A_new, logits = self.func_glcn(cat_embedding, rollout = False, check = True)
 
                 cat_embedding = self.func_comm(X=cat_embedding, A=A_new, dense=True)
-                #cat_embedding = self.func_comm2(X=cat_embedding, A=A_new.detach(), dense=True)
+                cat_embedding = self.func_comm2(X=cat_embedding, A=A_new.detach(), dense=True)
                 return cat_embedding, A_new
         else:
             if target == False:
@@ -422,7 +422,7 @@ class Agent(nn.Module):
                 cat_embedding = torch.cat([node_embedding_obs, node_embedding_comm], dim=2)
                 A_new, logits = self.func_glcn(cat_embedding, rollout = False)
                 cat_embedding = self.func_comm(X=cat_embedding, A=A_new, dense=True)
-                #cat_embedding = self.func_comm2(X=cat_embedding, A=A_new.detach(), dense=True)
+                cat_embedding = self.func_comm2(X=cat_embedding, A=A_new.detach(), dense=True)
                 return cat_embedding, A_new, logits
             else:
                 with torch.no_grad():
@@ -444,7 +444,7 @@ class Agent(nn.Module):
                     cat_embedding = torch.cat([node_embedding_obs, node_embedding_comm], dim=2)
                     A_new, logits = self.func_glcn(cat_embedding, rollout = False)
                     cat_embedding = self.func_comm_tar(X=cat_embedding, A=A_new, dense=True)
-                    #cat_embedding = self.func_comm2_tar(X=cat_embedding, A=A_new, dense=True)
+                    cat_embedding = self.func_comm2_tar(X=cat_embedding, A=A_new, dense=True)
                     return cat_embedding
 
     def cal_Q(self, obs, actions, action_features, avail_actions_next, A, target=False):
@@ -661,7 +661,6 @@ class Agent(nn.Module):
         rl_loss = F.mse_loss(q_tot.squeeze(1), td_target.detach())
         graph_loss = gamma1 * lap_quad - gamma2 * sec_eig_upperbound
         loss = rl_loss + graph_loss + float(os.environ.get("var_reg", 0.5)) * var_ +0.001*comm_loss.mean()#######
-        # print(rl_loss.shape, graph_loss.shape, var_.shape, comm_loss.shape)
         loss.backward()
         grad_clip = float(os.environ.get("grad_clip", 10))
         torch.nn.utils.clip_grad_norm_(self.eval_params, grad_clip)
