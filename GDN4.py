@@ -403,7 +403,7 @@ class Agent(nn.Module):
                 A_new, logits = self.func_glcn(cat_embedding, rollout = False, check = True)
 
                 cat_embedding = self.func_comm(X=cat_embedding, A=A_new, dense=True)
-                #cat_embedding = self.func_comm2(X=cat_embedding, A=A_new.detach(), dense=True)
+                cat_embedding = self.func_comm2(X=cat_embedding, A=A_new.detach(), dense=True)
                 return cat_embedding, A_new
         else:
             if target == False:
@@ -422,7 +422,7 @@ class Agent(nn.Module):
                 cat_embedding = torch.cat([node_embedding_obs, node_embedding_comm], dim=2)
                 A_new, logits = self.func_glcn(cat_embedding, rollout = False)
                 cat_embedding = self.func_comm(X=cat_embedding, A=A_new, dense=True)
-                #cat_embedding = self.func_comm2(X=cat_embedding, A=A_new.detach(), dense=True)
+                cat_embedding = self.func_comm2(X=cat_embedding, A=A_new.detach(), dense=True)
                 return cat_embedding, A_new, logits
             else:
                 with torch.no_grad():
@@ -444,7 +444,7 @@ class Agent(nn.Module):
                     cat_embedding = torch.cat([node_embedding_obs, node_embedding_comm], dim=2)
                     A_new, logits = self.func_glcn(cat_embedding, rollout = False)
                     cat_embedding = self.func_comm_tar(X=cat_embedding, A=A_new, dense=True)
-                    #cat_embedding = self.func_comm2_tar(X=cat_embedding, A=A_new, dense=True)
+                    cat_embedding = self.func_comm2_tar(X=cat_embedding, A=A_new, dense=True)
                     return cat_embedding
 
     def cal_Q(self, obs, actions, action_features, avail_actions_next, A, target=False):
