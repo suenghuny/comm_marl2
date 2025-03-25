@@ -126,12 +126,11 @@ class GIN(nn.Module):
     h_i^(k+1) = MLP^(k)((1 + ε^(k)) · h_i^(k) + ∑_{j∈N(i)} h_j^(k))
     """
 
-    def __init__(self, feature_size, graph_embedding_size, num_layers=2, eps=0, train_eps=True):
+    def __init__(self, feature_size, graph_embedding_size, num_layers=1, eps=0, train_eps=True):
         super(GIN, self).__init__()
 
         self.num_layers = num_layers
         self.mlps = nn.ModuleList()
-        self.batch_norms = nn.ModuleList()
 
         # 학습 가능한 epsilon 파라미터 (논문의 ε)
         if train_eps:
@@ -141,16 +140,14 @@ class GIN(nn.Module):
 
         # 첫 번째 레이어
         self.mlps.append(self.create_mlp(feature_size, graph_embedding_size))
-        self.batch_norms.append(nn.BatchNorm1d(graph_embedding_size))
 
         # 중간 레이어들
         for i in range(num_layers - 2):
             self.mlps.append(self.create_mlp(graph_embedding_size, graph_embedding_size))
-            self.batch_norms.append(nn.BatchNorm1d(graph_embedding_size))
+
 
         # 마지막 레이어
         self.mlps.append(self.create_mlp(graph_embedding_size, graph_embedding_size))
-        self.batch_norms.append(nn.BatchNorm1d(graph_embedding_size))
 
     def create_mlp(self, in_dim, out_dim):
         """2층 MLP 생성"""

@@ -1,7 +1,7 @@
 import pandas as pd
 from utils import *
 from smac_rev import StarCraft2Env
-from GDN3 import Agent
+from GDN_attn2 import Agent
 from functools import partial
 import numpy as np
 import sys
@@ -23,7 +23,7 @@ if vessl_on == True:
 else:
     import wandb
     wandb.login()
-    wandb.init(project="second-eigen", name="2-layer noise_annealing_all_time_with_kl_penalty")
+    wandb.init(project="second-eigen", name="GIN_noise_annealing_reverse_with_kl_penalty")
 
 
     output_dir = "output/"
@@ -156,6 +156,8 @@ def train(agent, env, e, t, train_start, epsilon, min_epsilon, anneal_epsilon, i
             n_agent=n_agent,
             mini_batch=False)
         action_feature = env.get_action_feature()  # 차원 : action_size X n_action_feature
+
+
         action, action_history = agent.sample_action(node_representation, action_feature, avail_action, epsilon)
         reward, done, info = env.step(action)
         agent.buffer.memory(node_feature, action, action_feature, edge_index_enemy, A, reward,
@@ -224,7 +226,7 @@ def main():
     train_start = int(os.environ.get("train_start", 10))# cfg.train_start
     epsilon = float(os.environ.get("epsilon", 1.0))#cfg.epsilon
     min_epsilon = float(os.environ.get("min_epsilon", 0.025)) #cfg.min_epsilon
-    anneal_steps = int(os.environ.get("anneal_steps", 50000))#cfg.anneal_steps
+    anneal_steps = int(os.environ.get("anneal_steps", 100000))#cfg.anneal_steps
     gamma1 = cfg.gamma1
     gamma2 = cfg.gamma2
     min_gamma2 = 10.0

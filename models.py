@@ -54,8 +54,6 @@ class Q_Attention(nn.Module):
         self.action_size = action_size
         self.hidden_dim = hidden_dim
         self.num_heads = num_heads
-
-        # Encoders for observations and actions
         self.obs_encoder = nn.Linear(obs_size, hidden_dim)
         self.action_encoder = nn.Linear(action_size, hidden_dim)
 
@@ -103,11 +101,15 @@ class Q_Attention(nn.Module):
         #     attention_scores = attention_scores.masked_fill(mask.unsqueeze(0) == 0, float(-1e8))
         # else:
         #     attention_scores = attention_scores.masked_fill(mask == 0, float(-1e8))
+
+
         attention_weights = F.softmax(attention_scores, dim=-1)
         query = torch.einsum('bda,bah->bdh', attention_weights, value)
         query = self.query_proj2(query)
         key = self.key_proj2(encoded_action)  # [batch_size, num_action, hidden_dim]
         q = torch.einsum('bdh,bah->bda', query, key) #/ (self.hidden_dim ** 0.5)
+        q = q.masked_fill(mask == 0, float(-1e8))
+        q = F.softplus(q)
         return q
 
 class Pi_Attention(nn.Module):
