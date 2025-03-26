@@ -93,20 +93,12 @@ class Q_Attention(nn.Module):
         query = self.query_proj(encoded_obs)  # [batch_size, num_agent, hidden_dim]
         key = self.key_proj(encoded_action)  # [batch_size, num_action, hidden_dim]
         value = self.value_proj(encoded_action)  # [batch_size, num_action, hidden_dim]
-
-        # Calculate attention scores
-        # [batch_size, num_agent, num_action]
         attention_scores = torch.einsum('bdh,bah->bda', query, key) / (self.hidden_dim ** 0.5)
-        # if mask.dim() == 2:
-        #     attention_scores = attention_scores.masked_fill(mask.unsqueeze(0) == 0, float(-1e8))
-        # else:
-        #     attention_scores = attention_scores.masked_fill(mask == 0, float(-1e8))
-
-
         attention_weights = F.softmax(attention_scores, dim=-1)
         query = torch.einsum('bda,bah->bdh', attention_weights, value)
         query = self.query_proj2(query)
         key = self.key_proj2(encoded_action)  # [batch_size, num_action, hidden_dim]
+
         q = torch.einsum('bdh,bah->bda', query, key) #/ (self.hidden_dim ** 0.5)
         q = q.masked_fill(mask == 0, float(-1e8))
         q = F.softplus(q)
