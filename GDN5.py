@@ -454,6 +454,7 @@ class Agent(nn.Module):
         - action sampling 시 : num_nodes X feature_size
         """
         if target == False:
+
             action_features = torch.tensor(action_features).to(device=device, dtype=torch.float32)
             action_size = action_features.shape[1]
             obs = obs.unsqueeze(2)
@@ -660,7 +661,7 @@ class Agent(nn.Module):
         comm_loss = -logits * exp_adv.detach()
         rl_loss = F.mse_loss(q_tot.squeeze(1), td_target.detach())
         graph_loss = gamma1 * lap_quad - gamma2 * sec_eig_upperbound
-        loss = rl_loss + graph_loss + float(os.environ.get("var_reg", 0.5)) * var_ +0.001*comm_loss.mean()#######
+        loss = rl_loss + graph_loss + float(os.environ.get("var_reg", 0.1)) * var_ +0.0001*comm_loss.mean()#######
         loss.backward()
         grad_clip = float(os.environ.get("grad_clip", 10))
         torch.nn.utils.clip_grad_norm_(self.eval_params, grad_clip)
