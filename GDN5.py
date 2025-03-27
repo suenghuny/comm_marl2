@@ -279,19 +279,19 @@ class Agent(nn.Module):
                                                            n_representation_obs=self.n_representation_action).to(
                 device)  # 수정사항
 
-        self.func_obs = GIN(feature_size=self.n_representation_obs, graph_embedding_size=self.graph_embedding).to(
+        self.func_obs = GAT(feature_size=self.n_representation_obs, graph_embedding_size=self.graph_embedding).to(
             device)
-        self.func_obs_tar = GIN(feature_size=self.n_representation_obs, graph_embedding_size=self.graph_embedding).to(
+        self.func_obs_tar = GAT(feature_size=self.n_representation_obs, graph_embedding_size=self.graph_embedding).to(
             device)
 
 
 
 
-        self.func_comm = GIN(feature_size=self.graph_embedding,graph_embedding_size=self.graph_embedding_comm).to(device)
-        self.func_comm_tar = GIN(feature_size=self.graph_embedding,graph_embedding_size=self.graph_embedding_comm).to(device)
+        self.func_comm = GAT(feature_size=self.graph_embedding,graph_embedding_size=self.graph_embedding_comm).to(device)
+        self.func_comm_tar = GAT(feature_size=self.graph_embedding,graph_embedding_size=self.graph_embedding_comm).to(device)
 
-        self.func_comm2 = GIN(feature_size=self.graph_embedding_comm, graph_embedding_size=self.graph_embedding_comm).to(device)
-        self.func_comm2_tar = GIN(feature_size=self.graph_embedding_comm, graph_embedding_size=self.graph_embedding_comm).to(device)
+        self.func_comm2 = GAT(feature_size=self.graph_embedding_comm, graph_embedding_size=self.graph_embedding_comm).to(device)
+        self.func_comm2_tar = GAT(feature_size=self.graph_embedding_comm, graph_embedding_size=self.graph_embedding_comm).to(device)
 
         self.func_glcn = GLCN(feature_size=self.graph_embedding,
                               feature_obs_size=self.graph_embedding,
@@ -334,7 +334,7 @@ class Agent(nn.Module):
         param_groups = [
             {'params': self.eval_params},
         ]
-        self.optimizer = optim.RMSprop(param_groups, lr=learning_rate)
+        self.optimizer = optim.Adam(param_groups, lr=learning_rate)
         self.scheduler = StepLR(optimizer=self.optimizer, step_size=cfg.scheduler_step, gamma=cfg.scheduler_ratio)
 
     def save_model(self, file_dir, e, t, win_rate):
@@ -379,6 +379,33 @@ class Agent(nn.Module):
             print(f"Missing key in state_dict: {e}")
         except Exception as e:
             print(f"An error occurred while loading the model: {e}")
+
+
+    def get_node_representation_rollout(self, node_feature, agent_feature, edge_index_obs, n_agent,
+                                     mini_batch=False, target=False, A_old=None):
+        if mini_batch == False:
+            with torch.no_grad():
+                node_feature = torch.tensor(node_feature, dtype=torch.float, device=device).unsqueeze(0)
+                agent_feature = torch.tensor(agent_feature, dtype=torch.float, device=device).unsqueeze(0)
+                batch_size = node_feature.shape[0]
+                num_nodes = node_feature.shape[1]
+                num_agents = agent_feature.shape[1]
+                node_feature = node_feature.reshape(batch_size * num_nodes, -1)
+                agent_feature = agent_feature.reshape(batch_size * num_agents, -1)
+                node_embedding_obs = self.node_representation(node_feature)
+                node_embedding_comm = self.node_representation_comm(agent_feature)
+
+                node_embedding_obs = node_embedding_obs.reshape(batch_size, num_nodes, -1)
+                node_embedding_comm = node_embedding_comm.reshape(batch_size, num_agents, -1)
+                edge_index_obs = torch.tensor(edge_index_obs).long().to(device).unsqueeze(0)
+                node_embedding_obs = self.func_obs(X=node_embedding_obs, A=edge_index_obs)[:, :n_agent, :]
+                cat_embedding = node_embedding_obs
+                A_new, logits = self.func_glcn(cat_embedding, rollout = True)
+                cat_embedding = self.func_comm(X=cat_embedding, A=A_new, dense=True)
+                cat_embedding = self.func_comm2(X=cat_embedding, A=A_new, dense=True)
+                cat_embedding = torch.cat([cat_embedding, node_embedding_obs, node_embedding_comm], dim=2)
+
+                return cat_embedding, A_new
 
     def get_node_representation_temp(self, node_feature, agent_feature, edge_index_obs, n_agent,
                                      mini_batch=False, target=False, A_old=None):
@@ -661,7 +688,7 @@ class Agent(nn.Module):
         comm_loss = -logits * exp_adv.detach()
         rl_loss = F.mse_loss(q_tot.squeeze(1), td_target.detach())
         graph_loss = gamma1 * lap_quad - gamma2 * sec_eig_upperbound
-        loss = rl_loss + graph_loss + float(os.environ.get("var_reg", 0.1)) * var_ +0.0001*comm_loss.mean()#######
+        loss = rl_loss + graph_loss + float(os.environ.get("var_reg", 0.5)) * var_ +0.001*comm_loss.mean()#######
         loss.backward()
         grad_clip = float(os.environ.get("grad_clip", 10))
         torch.nn.utils.clip_grad_norm_(self.eval_params, grad_clip)

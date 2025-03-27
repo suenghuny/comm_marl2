@@ -223,7 +223,7 @@ def main():
     num_episode = 500000 #cfg.num_episode
     train_start = int(os.environ.get("train_start", 10))# cfg.train_start
     epsilon = float(os.environ.get("epsilon", 1.0))#cfg.epsilon
-    min_epsilon = float(os.environ.get("min_epsilon", 0.025)) #cfg.min_epsilon
+    min_epsilon = float(os.environ.get("min_epsilon", 1.0)) #cfg.min_epsilon
     anneal_steps = int(os.environ.get("anneal_steps", 100000))#cfg.anneal_steps
     gamma1 = cfg.gamma1
     gamma2 = cfg.gamma2
