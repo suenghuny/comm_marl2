@@ -305,9 +305,9 @@ class GLCN(nn.Module):
     #     return A, probs
 
     def forward(self, h, rollout, check = False):
-        if rollout==False:
-            if check == True:
-                self.step +=1
+        # if rollout==False:
+        #     if check == True:
+        #         self.step +=1
         h = h[:, :, :self.feature_obs_size].detach()
         h = torch.einsum("bijk,kl->bijl", torch.abs(h.unsqueeze(2) - h.unsqueeze(1)), self.a_link)
         h = h.squeeze(3)

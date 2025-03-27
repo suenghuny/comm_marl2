@@ -334,7 +334,7 @@ class Agent(nn.Module):
         param_groups = [
             {'params': self.eval_params},
         ]
-        self.optimizer = optim.RMSprop(param_groups, lr=learning_rate)
+        self.optimizer = optim.Adam(param_groups, lr=learning_rate)
         self.scheduler = StepLR(optimizer=self.optimizer, step_size=cfg.scheduler_step, gamma=cfg.scheduler_ratio)
 
     def save_model(self, file_dir, e, t, win_rate):
@@ -426,7 +426,7 @@ class Agent(nn.Module):
                 edge_index_obs = torch.tensor(edge_index_obs).long().to(device).unsqueeze(0)
                 node_embedding_obs = self.func_obs(X=node_embedding_obs, A=edge_index_obs)[:, :n_agent, :]
                 cat_embedding = node_embedding_obs
-                A_new, logits = self.func_glcn(cat_embedding, rollout = False, check = True)
+                A_new, logits = self.func_glcn(cat_embedding, rollout = False)
                 cat_embedding = self.func_comm(X=cat_embedding, A=A_new, dense=True)
                 cat_embedding = torch.cat([cat_embedding, node_embedding_obs, node_embedding_comm], dim=2)
 
