@@ -91,7 +91,7 @@ def evaluation(env, agent, num_eval):
             agent_feature = torch.cat([agent_feature, action_history], dim = 1)
             n_agent = len(avail_action)
 
-            node_representation, A = agent.get_node_representation_temp(
+            node_representation, A = agent.get_node_representation_rollout(
                                                                  node_feature,
                                                                  agent_feature,
                                                                  edge_index_enemy,
@@ -225,7 +225,7 @@ def main():
     num_episode = 500000 #cfg.num_episode
     train_start = int(os.environ.get("train_start", 10))# cfg.train_start
     epsilon = float(os.environ.get("epsilon", 1.0))#cfg.epsilon
-    min_epsilon = float(os.environ.get("min_epsilon", 0.05)) #cfg.min_epsilon
+    min_epsilon = float(os.environ.get("min_epsilon", 1.0)) #cfg.min_epsilon
     anneal_steps = int(os.environ.get("anneal_steps", 100000))#cfg.anneal_steps
     gamma1 = cfg.gamma1
     gamma2 = cfg.gamma2

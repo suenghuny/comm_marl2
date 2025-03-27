@@ -402,7 +402,6 @@ class Agent(nn.Module):
                 cat_embedding = node_embedding_obs
                 A_new, logits = self.func_glcn(cat_embedding, rollout = True)
                 cat_embedding = self.func_comm(X=cat_embedding, A=A_new, dense=True)
-                cat_embedding = self.func_comm2(X=cat_embedding, A=A_new, dense=True)
                 cat_embedding = torch.cat([cat_embedding, node_embedding_obs, node_embedding_comm], dim=2)
 
                 return cat_embedding, A_new
@@ -427,7 +426,7 @@ class Agent(nn.Module):
                 node_embedding_obs = self.func_obs(X=node_embedding_obs, A=edge_index_obs)[:, :n_agent, :]
                 cat_embedding = node_embedding_obs
                 A_new, logits = self.func_glcn(cat_embedding, rollout = False)
-                cat_embedding = self.func_comm(X=cat_embedding, A=A_new, dense=True)
+                cat_embedding = self.func_comm(X=cat_embedding, A=A_new, dense=True, check = True)
                 cat_embedding = torch.cat([cat_embedding, node_embedding_obs, node_embedding_comm], dim=2)
 
                 return cat_embedding, A_new
