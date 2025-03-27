@@ -26,7 +26,7 @@ def sample_adjacency_matrix(weight_matrix):
     return adjacency_matrix
 
 
-def gumbel_sigmoid(logits: Tensor, tau: float = 1.0, hard: bool = True, threshold: float = 0.5,
+def gumbel_sigmoid(logits: Tensor, tau: float = 1.4, hard: bool = True, threshold: float = 0.5,
                    mini_batch: bool = False,
                    start_factor = None,
                    step = None,
