@@ -256,10 +256,17 @@ class Agent(nn.Module):
                                                      hidden_size=self.hidden_size_obs,
                                                      n_representation_obs=self.n_representation_obs).to(device)  # 수정사항
 
-        self.node_representation_comm = NodeEmbedding(feature_size=2 * self.feature_size + 5 - 1,
+        self.node_representation_comm = NodeEmbedding(feature_size= self.feature_size - 1,
                                                       hidden_size=self.hidden_size_comm,
                                                       n_representation_obs=self.n_representation_comm).to(device)
-        self.node_representation_comm_tar = NodeEmbedding(feature_size=2 * self.feature_size + 5 - 1,
+        self.node_representation_comm_tar = NodeEmbedding(feature_size= self.feature_size - 1,
+                                                          hidden_size=self.hidden_size_comm,
+                                                          n_representation_obs=self.n_representation_comm).to(device)
+
+        self.node_representation_comm2 = NodeEmbedding(feature_size=self.feature_size + 5,
+                                                      hidden_size=self.hidden_size_comm,
+                                                      n_representation_obs=self.n_representation_comm).to(device)
+        self.node_representation_comm2_tar = NodeEmbedding(feature_size=self.feature_size + 5,
                                                           hidden_size=self.hidden_size_comm,
                                                           n_representation_obs=self.n_representation_comm).to(device)
 
@@ -302,8 +309,8 @@ class Agent(nn.Module):
                                   graph_embedding_size=self.graph_embedding_comm).to(device)
 
         print(self.graph_embedding_comm + self.n_representation_action)
-        self.Q = Network(self.graph_embedding_comm + self.graph_embedding + n_representation_comm+ self.n_representation_action, hidden_size_Q).to(device)
-        self.Q_tar = Network(self.graph_embedding_comm + self.graph_embedding + n_representation_comm+ self.n_representation_action, hidden_size_Q).to(device)
+        self.Q = Network(self.graph_embedding_comm + self.graph_embedding + 2*n_representation_comm+ self.n_representation_action, hidden_size_Q).to(device)
+        self.Q_tar = Network(self.graph_embedding_comm + self.graph_embedding + 2*n_representation_comm+ self.n_representation_action, hidden_size_Q).to(device)
 
         self.C = Network(self.graph_embedding + self.n_representation_comm + self.n_representation_action,
                          hidden_size_Q).to(device)
@@ -312,6 +319,7 @@ class Agent(nn.Module):
 
         self.node_representation_tar.load_state_dict(self.node_representation.state_dict())
         self.node_representation_comm_tar.load_state_dict(self.node_representation_comm.state_dict())
+        self.node_representation_comm2_tar.load_state_dict(self.node_representation_comm2.state_dict())
         self.action_representation_tar.load_state_dict(self.action_representation.state_dict())
         self.func_obs_tar.load_state_dict(self.func_obs.state_dict())
         self.func_glcn_tar.load_state_dict(self.func_glcn.state_dict())
@@ -327,6 +335,7 @@ class Agent(nn.Module):
                            list(self.C.parameters()) + \
                            list(self.node_representation.parameters()) + \
                            list(self.node_representation_comm.parameters()) + \
+                           list(self.node_representation_comm2.parameters()) + \
                            list(self.func_obs.parameters()) + \
                            list(self.func_comm.parameters()) + \
                            list(self.func_comm2.parameters()) + \
@@ -356,6 +365,8 @@ class Agent(nn.Module):
             "action_representation_tar": self.action_representation_tar.state_dict(),
             "node_representation_comm": self.node_representation_comm.state_dict(),
             "node_representation_comm_tar": self.node_representation_comm_tar.state_dict(),
+            "node_representation_comm2": self.node_representation_comm2.state_dict(),
+            "node_representation_comm2_tar": self.node_representation_comm2_tar.state_dict(),
             "node_representation": self.node_representation.state_dict(),
             "node_representation_tar": self.node_representation_tar.state_dict(),
             "VDN": self.VDN.state_dict(),
@@ -479,19 +490,23 @@ class Agent(nn.Module):
                 num_nodes = node_feature.shape[1]
                 num_agents = agent_feature.shape[1]
                 node_feature = node_feature.reshape(batch_size * num_nodes, -1)
-                agent_feature = agent_feature.reshape(batch_size * num_agents, -1)
+                agent_feature1 = agent_feature.reshape(batch_size * num_agents, -1)[:, :self.feature_size-1]
+                agent_feature2 = agent_feature.reshape(batch_size * num_agents, -1)[:, self.feature_size-1:]
+
                 node_embedding_obs = self.node_representation(node_feature)
-                node_embedding_comm = self.node_representation_comm(agent_feature)
+                node_embedding_comm1 = self.node_representation_comm(agent_feature1)
+                node_embedding_comm2 = self.node_representation_comm2(agent_feature2)
 
                 node_embedding_obs = node_embedding_obs.reshape(batch_size, num_nodes, -1)
-                node_embedding_comm = node_embedding_comm.reshape(batch_size, num_agents, -1)
+                node_embedding_comm1 = node_embedding_comm1.reshape(batch_size, num_agents, -1)
+                node_embedding_comm2 = node_embedding_comm2.reshape(batch_size, num_agents, -1)
                 edge_index_obs = torch.tensor(edge_index_obs).long().to(device).unsqueeze(0)
                 node_embedding_obs = self.func_obs(X=node_embedding_obs, A=edge_index_obs)[:, :n_agent, :]
                 cat_embedding = node_embedding_obs
                 A_new, logits = self.func_glcn(cat_embedding, rollout = False, check = True)
                 cat_embedding = self.func_comm(X=cat_embedding, A=A_new, dense=True)
                 cat_embedding = self.func_comm2(X=cat_embedding, A=A_new, dense=True)
-                cat_embedding = torch.cat([cat_embedding, node_embedding_obs, node_embedding_comm], dim=2)
+                cat_embedding = torch.cat([cat_embedding, node_embedding_obs, node_embedding_comm1,node_embedding_comm2], dim=2)
 
                 return cat_embedding, A_new
         else:
@@ -502,18 +517,22 @@ class Agent(nn.Module):
                 num_nodes = node_feature.shape[1]
                 num_agents = agent_feature.shape[1]
                 node_feature = node_feature.reshape(batch_size * num_nodes, -1)
-                agent_feature = agent_feature.reshape(batch_size * num_agents, -1)
-                node_embedding_obs = self.node_representation(node_feature)
-                node_embedding_comm = self.node_representation_comm(agent_feature)
-                node_embedding_obs = node_embedding_obs.reshape(batch_size, num_nodes, -1)
-                node_embedding_comm = node_embedding_comm.reshape(batch_size, num_agents, -1)
-                node_embedding_obs = self.func_obs(X=node_embedding_obs, A=edge_index_obs)[:, :n_agent, :]
+                agent_feature1 = agent_feature.reshape(batch_size * num_agents, -1)[:, :self.feature_size - 1]
+                agent_feature2 = agent_feature.reshape(batch_size * num_agents, -1)[:, self.feature_size - 1:]
 
+                node_embedding_obs = self.node_representation(node_feature)
+                node_embedding_comm1 = self.node_representation_comm(agent_feature1)
+                node_embedding_comm2 = self.node_representation_comm2(agent_feature2)
+
+                node_embedding_obs = node_embedding_obs.reshape(batch_size, num_nodes, -1)
+                node_embedding_comm1 = node_embedding_comm1.reshape(batch_size, num_agents, -1)
+                node_embedding_comm2 = node_embedding_comm2.reshape(batch_size, num_agents, -1)
+                node_embedding_obs = self.func_obs(X=node_embedding_obs, A=edge_index_obs)[:, :n_agent, :]
                 cat_embedding = node_embedding_obs
-                A_new, logits = self.func_glcn(cat_embedding, rollout = False)
+                A_new, logits = self.func_glcn(cat_embedding, rollout=False, check=True)
                 cat_embedding = self.func_comm(X=cat_embedding, A=A_new, dense=True)
                 cat_embedding = self.func_comm2(X=cat_embedding, A=A_new, dense=True)
-                cat_embedding = torch.cat([cat_embedding, node_embedding_obs, node_embedding_comm], dim=2)
+                cat_embedding = torch.cat([cat_embedding, node_embedding_obs, node_embedding_comm1, node_embedding_comm2], dim=2)
                 return cat_embedding, A_new, logits
             else:
                 with torch.no_grad():
@@ -523,20 +542,23 @@ class Agent(nn.Module):
                     num_nodes = node_feature.shape[1]
                     num_agents = agent_feature.shape[1]
                     node_feature = node_feature.reshape(batch_size * num_nodes, -1)
-                    agent_feature = agent_feature.reshape(batch_size * num_agents, -1)
+                    agent_feature1 = agent_feature.reshape(batch_size * num_agents, -1)[:, :self.feature_size - 1]
+                    agent_feature2 = agent_feature.reshape(batch_size * num_agents, -1)[:, self.feature_size - 1:]
 
                     node_embedding_obs = self.node_representation_tar(node_feature)
-                    node_embedding_comm = self.node_representation_comm_tar(agent_feature)
+                    node_embedding_comm1 = self.node_representation_comm_tar(agent_feature1)
+                    node_embedding_comm2 = self.node_representation_comm2_tar(agent_feature2)
 
                     node_embedding_obs = node_embedding_obs.reshape(batch_size, num_nodes, -1)
-                    node_embedding_comm = node_embedding_comm.reshape(batch_size, num_agents, -1)
-
+                    node_embedding_comm1 = node_embedding_comm1.reshape(batch_size, num_agents, -1)
+                    node_embedding_comm2 = node_embedding_comm2.reshape(batch_size, num_agents, -1)
                     node_embedding_obs = self.func_obs_tar(X=node_embedding_obs, A=edge_index_obs)[:, :n_agent, :]
                     cat_embedding = node_embedding_obs
-                    A_new, logits = self.func_glcn_tar(cat_embedding, rollout=False)
+                    A_new, logits = self.func_glcn(cat_embedding, rollout=False, check=True)
                     cat_embedding = self.func_comm_tar(X=cat_embedding, A=A_new, dense=True)
                     cat_embedding = self.func_comm2_tar(X=cat_embedding, A=A_new, dense=True)
-                    cat_embedding = torch.cat([cat_embedding, node_embedding_obs, node_embedding_comm], dim=2)
+                    cat_embedding = torch.cat(
+                        [cat_embedding, node_embedding_obs, node_embedding_comm1, node_embedding_comm2], dim=2)
                     return cat_embedding
 
     def cal_Q(self, obs, actions, action_features, avail_actions_next, A, target=False):
@@ -677,6 +699,7 @@ class Agent(nn.Module):
             self.C_tar.eval()
             self.node_representation.eval()
             self.node_representation_comm.eval()
+            self.node_representation_comm2.eval()
             self.func_obs.eval()
             self.action_representation.eval()
             self.func_comm.eval()
@@ -699,6 +722,7 @@ class Agent(nn.Module):
             self.func_comm2_tar.train()
             self.node_representation_tar.eval()
             self.node_representation_comm_tar.eval()
+            self.node_representation_comm2_tar.eval()
             self.action_representation_tar.eval()
             self.func_obs_tar.eval()
             self.func_glcn_tar.eval()
@@ -753,12 +777,11 @@ class Agent(nn.Module):
         comm_loss = -logits * exp_adv.detach()
         rl_loss = F.mse_loss(q_tot.squeeze(1), td_target.detach())
         graph_loss = gamma1 * lap_quad - gamma2 * sec_eig_upperbound
-        loss = rl_loss + graph_loss + +0.001*comm_loss.mean()#######
+        loss = rl_loss + graph_loss + 0.001*comm_loss.mean() + float(os.environ.get("var_reg", 0.5)) * var_
         loss.backward()
         grad_clip = float(os.environ.get("grad_clip", 10))
         torch.nn.utils.clip_grad_norm_(self.eval_params, grad_clip)
         self.optimizer.step()
-
         self.optimizer.zero_grad()
 
         tau = 1e-4
@@ -777,7 +800,9 @@ class Agent(nn.Module):
         for target_param, local_param in zip(self.node_representation_comm_tar.parameters(),
                                              self.node_representation_comm.parameters()):
             target_param.data.copy_(tau * local_param.data + (1 - tau) * target_param.data)
-
+        for target_param, local_param in zip(self.node_representation_comm2_tar.parameters(),
+                                             self.node_representation_comm2.parameters()):
+            target_param.data.copy_(tau * local_param.data + (1 - tau) * target_param.data)
 
 
         for target_param, local_param in zip(self.action_representation_tar.parameters(),
