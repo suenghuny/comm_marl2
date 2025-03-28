@@ -464,19 +464,24 @@ class Agent(nn.Module):
                 num_nodes = node_feature.shape[1]
                 num_agents = agent_feature.shape[1]
                 node_feature = node_feature.reshape(batch_size * num_nodes, -1)
-                agent_feature = agent_feature.reshape(batch_size * num_agents, -1)
+                agent_feature1 = agent_feature.reshape(batch_size * num_agents, -1)[:, :self.feature_size - 1]
+                agent_feature2 = agent_feature.reshape(batch_size * num_agents, -1)[:, self.feature_size - 1:]
+
                 node_embedding_obs = self.node_representation(node_feature)
-                node_embedding_comm = self.node_representation_comm(agent_feature)
+                node_embedding_comm1 = self.node_representation_comm(agent_feature1)
+                node_embedding_comm2 = self.node_representation_comm2(agent_feature2)
 
                 node_embedding_obs = node_embedding_obs.reshape(batch_size, num_nodes, -1)
-                node_embedding_comm = node_embedding_comm.reshape(batch_size, num_agents, -1)
+                node_embedding_comm1 = node_embedding_comm1.reshape(batch_size, num_agents, -1)
+                node_embedding_comm2 = node_embedding_comm2.reshape(batch_size, num_agents, -1)
                 edge_index_obs = torch.tensor(edge_index_obs).long().to(device).unsqueeze(0)
                 node_embedding_obs = self.func_obs(X=node_embedding_obs, A=edge_index_obs)[:, :n_agent, :]
                 cat_embedding = node_embedding_obs
-                A_new, logits = self.func_glcn(cat_embedding, rollout = True)
+                A_new, logits = self.func_glcn(cat_embedding, rollout=True)
                 cat_embedding = self.func_comm(X=cat_embedding, A=A_new, dense=True)
                 cat_embedding = self.func_comm2(X=cat_embedding, A=A_new, dense=True)
-                cat_embedding = torch.cat([cat_embedding, node_embedding_obs, node_embedding_comm], dim=2)
+                cat_embedding = torch.cat(
+                    [cat_embedding, node_embedding_obs, node_embedding_comm1, node_embedding_comm2], dim=2)
 
                 return cat_embedding, A_new
 
