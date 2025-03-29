@@ -23,7 +23,7 @@ if vessl_on == True:
 else:
     import wandb
     wandb.login()
-    wandb.init(project="second-eigen", name="strange manner")
+    wandb.init(project="second-eigen", name="strange manner rms_prop")
 
 
     output_dir = "output/"
