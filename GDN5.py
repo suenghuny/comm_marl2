@@ -334,7 +334,7 @@ class Agent(nn.Module):
         param_groups = [
             {'params': self.eval_params},
         ]
-        self.optimizer = optim.Adam(param_groups, lr=learning_rate)
+        self.optimizer = optim.RMSprop(param_groups, lr=learning_rate)
         self.scheduler = StepLR(optimizer=self.optimizer, step_size=cfg.scheduler_step, gamma=cfg.scheduler_ratio)
 
     def save_model(self, file_dir, e, t, win_rate):

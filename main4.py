@@ -91,7 +91,7 @@ def evaluation(env, agent, num_eval):
             agent_feature = torch.cat([agent_feature, action_history], dim = 1)
             n_agent = len(avail_action)
 
-            node_representation, A = agent.get_node_representation_rollout(
+            node_representation, A = agent.get_node_representation_temp(
                                                                  node_feature,
                                                                  agent_feature,
                                                                  edge_index_enemy,
