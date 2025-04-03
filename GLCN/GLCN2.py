@@ -249,7 +249,10 @@ class GAT(nn.Module):
 
     def forward(self, A, X, dense=False):
         batch_size, num_nodes, feature_size = X.shape
+
         if dense == False:
+            # print(batch_size, num_nodes, feature_size)
+            # print(A[0], torch.ones(torch.tensor(A[0]).shape[1]))
             E = torch.stack([
                 torch.sparse_coo_tensor(
                     torch.tensor(A[b], dtype=torch.long).to(device),

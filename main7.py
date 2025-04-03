@@ -1,7 +1,7 @@
 import pandas as pd
 from utils import *
 from smac_rev import StarCraft2Env
-from GDN5 import Agent
+from GDN_attn3 import Agent
 from functools import partial
 import numpy as np
 import sys
@@ -23,7 +23,7 @@ if vessl_on == True:
 else:
     import wandb
     wandb.login()
-    wandb.init(project="second-eigen", name="strange manner no comm_loss_huber_loss")
+    wandb.init(project="second-eigen", name="strange manner")
 
 
     output_dir = "output/"
@@ -91,7 +91,7 @@ def evaluation(env, agent, num_eval):
             agent_feature = torch.cat([agent_feature, action_history], dim = 1)
             n_agent = len(avail_action)
 
-            node_representation, A = agent.get_node_representation_temp(
+            node_representation, A = agent.get_node_representation_rollout(
                                                                  node_feature,
                                                                  agent_feature,
                                                                  edge_index_enemy,
@@ -217,17 +217,16 @@ def main():
     n_representation_comm =  cfg.n_representation_comm
     graph_embedding = cfg.graph_embedding
     graph_embedding_comm =  cfg.graph_embedding_comm
-    buffer_size = int(os.environ.get("buffer_size", 500000))       # cfg.buffer_size
-    print("버퍼 사이즈",buffer_size)
-    batch_size = int(os.environ.get("batch_size", 24))             # cfg.batch_siz
+    buffer_size = int(os.environ.get("buffer_size", 50000))       # cfg.buffer_size
+    batch_size = int(os.environ.get("batch_size", 48))             # cfg.batch_siz
     gamma = 0.99      ##                                                      # cfg.gamma
     learning_rate = cfg.lr      # cfg.lr
     learning_rate_graph = learning_rate  # cfg.lr
     num_episode = 500000 #cfg.num_episode
     train_start = int(os.environ.get("train_start", 10))# cfg.train_start
     epsilon = float(os.environ.get("epsilon", 1.0))#cfg.epsilon
-    min_epsilon = float(os.environ.get("min_epsilon", 0.05)) #cfg.min_epsilon
-    anneal_steps = int(os.environ.get("anneal_steps", 100000))#cfg.anneal_steps
+    min_epsilon = float(os.environ.get("min_epsilon", 0.1)) #cfg.min_epsilon
+    anneal_steps = int(os.environ.get("anneal_steps", 50000))#cfg.anneal_steps
     gamma1 = cfg.gamma1
     gamma2 = cfg.gamma2
     min_gamma2 = 10.0

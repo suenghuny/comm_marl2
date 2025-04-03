@@ -217,7 +217,7 @@ def main():
     n_representation_comm =  cfg.n_representation_comm
     graph_embedding = cfg.graph_embedding
     graph_embedding_comm =  cfg.graph_embedding_comm
-    buffer_size = int(os.environ.get("buffer_size", 100000))       # cfg.buffer_size
+    buffer_size = int(os.environ.get("buffer_size", 50000))       # cfg.buffer_size
     batch_size = int(os.environ.get("batch_size", 48))             # cfg.batch_siz
     gamma = 0.99      ##                                                      # cfg.gamma
     learning_rate = cfg.lr      # cfg.lr
@@ -225,7 +225,7 @@ def main():
     num_episode = 500000 #cfg.num_episode
     train_start = int(os.environ.get("train_start", 10))# cfg.train_start
     epsilon = float(os.environ.get("epsilon", 1.0))#cfg.epsilon
-    min_epsilon = float(os.environ.get("min_epsilon", 0.05)) #cfg.min_epsilon
+    min_epsilon = float(os.environ.get("min_epsilon", 0.1)) #cfg.min_epsilon
     anneal_steps = int(os.environ.get("anneal_steps", 50000))#cfg.anneal_steps
     gamma1 = cfg.gamma1
     gamma2 = cfg.gamma2

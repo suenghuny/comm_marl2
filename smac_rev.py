@@ -1078,6 +1078,7 @@ class StarCraft2Env(MultiAgentEnv):
         edge_index = [[], []]
         if heterogeneous == False:
             for agent_id in range(self.n_agents):
+
                 edge_index[0].append(agent_id)
                 edge_index[1].append(agent_id)
         else:
