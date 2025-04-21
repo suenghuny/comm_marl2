@@ -351,20 +351,21 @@ class Agent(nn.Module):
                            list(self.func_comm2.parameters()) + \
                            list(self.action_representation.parameters())+\
                            list(self.action_representation2.parameters())
+        new_lr = learning_rate
         param_groups = [
             {'params': self.func_glcn.parameters(), 'lr': learning_rate},
             {'params': self.VDN.parameters(), 'lr': learning_rate},
-            {'params': self.Q.parameters(), 'lr': 1e-5},  # Q에 대해 다른 학습률 설정
-            {'params': self.Q2.parameters(), 'lr': 1e-5},  # Q2에 대해 다른 학습률 설정
+            {'params': self.Q.parameters(), 'lr': learning_rate},  # Q에 대해 다른 학습률 설정
+            {'params': self.Q2.parameters(), 'lr': learning_rate},  # Q2에 대해 다른 학습률 설정
             {'params': self.C.parameters(), 'lr': learning_rate},
             {'params': self.node_representation.parameters(), 'lr': learning_rate},
             {'params': self.node_representation_comm.parameters(), 'lr': learning_rate},
             {'params': self.func_obs.parameters(), 'lr': learning_rate},
             {'params': self.func_comm.parameters(), 'lr': learning_rate},
             {'params': self.func_comm2.parameters(), 'lr': learning_rate},
-            {'params': self.action_representation.parameters(), 'lr': 1e-5},
+            {'params': self.action_representation.parameters(), 'lr': learning_rate},
             # action_representation에 대해 다른 학습률 설정
-            {'params': self.action_representation2.parameters(), 'lr': 1e-5}
+            {'params': self.action_representation2.parameters(), 'lr': learning_rate}
             # action_representation2에 대해 다른 학습률 설정
         ]
         self.optimizer = optim.RMSprop(param_groups, lr=learning_rate)
@@ -836,7 +837,7 @@ class Agent(nn.Module):
         q_tot = torch.min(q1_tot, q2_tot)
         rl_loss = 0.5*rl_loss1+0.5*rl_loss2
         graph_loss = gamma1 * lap_quad - gamma2 * sec_eig_upperbound
-        loss = rl_loss + graph_loss + 0.25*var1_+0.25*var2_+ 0.05*q_tot.mean()
+        loss = rl_loss + graph_loss + 0.25*var1_+0.25*var2_+ 0.1*q_tot.mean()
         loss.backward()
 
         grad_clip = float(os.environ.get("grad_clip", 10))
