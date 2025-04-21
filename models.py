@@ -30,6 +30,7 @@ class Network(nn.Module):
         self.fcn_2 = nn.Linear(hidden_size_q, int(hidden_size_q/2))
         self.fcn_3 = nn.Linear(int(hidden_size_q/2), int(hidden_size_q/4))
         self.fcn_4 = nn.Linear(int(hidden_size_q/4), int(hidden_size_q/8))
+
         self.fcn_5 = nn.Linear(int(hidden_size_q/8), 1)
         torch.nn.init.xavier_uniform_(self.fcn_1.weight)
         torch.nn.init.xavier_uniform_(self.fcn_2.weight)

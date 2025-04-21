@@ -22,9 +22,10 @@ if vessl_on == True:
         os.makedirs(output_dir)
 else:
     import wandb
+    print("what")
     wandb.login()
-    wandb.init(project="second-eigen", name="strange manner no comm_loss_huber_loss")
-
+    wandb.init(project="second-eigen", name="strange manner adam double q-learning version")
+    print("double q learning")
 
     output_dir = "output/"
     import os
@@ -217,17 +218,17 @@ def main():
     n_representation_comm =  cfg.n_representation_comm
     graph_embedding = cfg.graph_embedding
     graph_embedding_comm =  cfg.graph_embedding_comm
-    buffer_size = int(os.environ.get("buffer_size", 500000))       # cfg.buffer_size
-    print("버퍼 사이즈",buffer_size)
-    batch_size = int(os.environ.get("batch_size", 24))             # cfg.batch_siz
+    buffer_size = int(os.environ.get("buffer_size", 200000))       # cfg.buffer_size
+    batch_size = int(os.environ.get("batch_size", 16))             # cfg.batch_siz
     gamma = 0.99      ##                                                      # cfg.gamma
+    print("ssssss")
     learning_rate = cfg.lr      # cfg.lr
     learning_rate_graph = learning_rate  # cfg.lr
     num_episode = 500000 #cfg.num_episode
     train_start = int(os.environ.get("train_start", 10))# cfg.train_start
     epsilon = float(os.environ.get("epsilon", 1.0))#cfg.epsilon
     min_epsilon = float(os.environ.get("min_epsilon", 0.05)) #cfg.min_epsilon
-    anneal_steps = int(os.environ.get("anneal_steps", 100000))#cfg.anneal_steps
+    anneal_steps = int(os.environ.get("anneal_steps", 50000))#cfg.anneal_steps
     gamma1 = cfg.gamma1
     gamma2 = cfg.gamma2
     min_gamma2 = 10.0

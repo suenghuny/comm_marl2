@@ -212,9 +212,9 @@ class Agent(nn.Module):
                  min_graph_variance,
                  env
                  ):
-        torch.manual_seed(81)
-        random.seed(81)
-        np.random.seed(81)
+        torch.manual_seed(54)
+        random.seed(54)
+        np.random.seed(54)
         super(Agent, self).__init__()
         self.num_agent = num_agent
         self.num_enemy = num_enemy
@@ -334,7 +334,9 @@ class Agent(nn.Module):
         param_groups = [
             {'params': self.eval_params},
         ]
-        self.optimizer = optim.Adam(param_groups, lr=learning_rate)
+        self.optimizer = optim.RMSprop(param_groups, lr=learning_rate)
+        print('rmsprop'
+        )
         self.scheduler = StepLR(optimizer=self.optimizer, step_size=cfg.scheduler_step, gamma=cfg.scheduler_ratio)
 
     def save_model(self, file_dir, e, t, win_rate):
@@ -462,9 +464,9 @@ class Agent(nn.Module):
                 edge_index_obs = torch.tensor(edge_index_obs).long().to(device).unsqueeze(0)
                 node_embedding_obs = self.func_obs(X=node_embedding_obs, A=edge_index_obs)[:, :n_agent, :]
                 cat_embedding = node_embedding_obs
-                A_new, logits = self.func_glcn(cat_embedding, rollout = False)
+                A_new, logits = self.func_glcn(cat_embedding)
                 cat_embedding = self.func_comm(X=cat_embedding, A=A_new, dense=True)
-                #cat_embedding = self.func_comm2(X=cat_embedding, A=A_new, dense=True)
+                cat_embedding = self.func_comm2(X=cat_embedding, A=A_new, dense=True)
                 cat_embedding = torch.cat([cat_embedding, node_embedding_obs, node_embedding_comm], dim=2)
 
                 return cat_embedding, A_new
@@ -490,7 +492,7 @@ class Agent(nn.Module):
                 cat_embedding = node_embedding_obs
                 A_new, logits = self.func_glcn(cat_embedding, rollout = False)
                 cat_embedding = self.func_comm(X=cat_embedding, A=A_new, dense=True)
-                #cat_embedding = self.func_comm2(X=cat_embedding, A=A_new, dense=True)
+                cat_embedding = self.func_comm2(X=cat_embedding, A=A_new, dense=True)
                 cat_embedding = torch.cat([cat_embedding, node_embedding_obs, node_embedding_comm], dim=2)
 
                 return cat_embedding, A_new
@@ -512,7 +514,7 @@ class Agent(nn.Module):
                 cat_embedding = node_embedding_obs
                 A_new, logits = self.func_glcn(cat_embedding, rollout = False, check = True)
                 cat_embedding = self.func_comm(X=cat_embedding, A=A_new, dense=True)
-                #cat_embedding = self.func_comm2(X=cat_embedding, A=A_new, dense=True)
+                cat_embedding = self.func_comm2(X=cat_embedding, A=A_new, dense=True)
                 cat_embedding = torch.cat([cat_embedding, node_embedding_obs, node_embedding_comm], dim=2)
                 return cat_embedding, A_new, logits
             else:
@@ -535,7 +537,7 @@ class Agent(nn.Module):
                     cat_embedding = node_embedding_obs
                     A_new, logits = self.func_glcn_tar(cat_embedding, rollout=False)
                     cat_embedding = self.func_comm_tar(X=cat_embedding, A=A_new, dense=True)
-                    #cat_embedding = self.func_comm2_tar(X=cat_embedding, A=A_new, dense=True)
+                    cat_embedding = self.func_comm2_tar(X=cat_embedding, A=A_new, dense=True)
                     cat_embedding = torch.cat([cat_embedding, node_embedding_obs, node_embedding_comm], dim=2)
                     return cat_embedding
 
@@ -588,6 +590,8 @@ class Agent(nn.Module):
                 Q_tar = self.Q_tar(obs_and_action)
                 Q_tar = Q_tar.reshape([self.batch_size, self.num_agent, action_size])
                 Q_tar = Q_tar.masked_fill(mask == 0, float('-inf'))
+
+
 
                 Q_cur = self.Q(obs_and_action)
                 Q_cur = Q_cur.reshape([self.batch_size, self.num_agent, action_size])
@@ -758,15 +762,15 @@ class Agent(nn.Module):
         comm_loss = -logits * exp_adv.detach()
         rl_loss = F.mse_loss(q_tot.squeeze(1), td_target.detach())
         graph_loss = gamma1 * lap_quad - gamma2 * sec_eig_upperbound
-        loss = rl_loss + graph_loss + 0.5*var_#+0.001*comm_loss.mean()
+        loss = rl_loss + graph_loss +0.5*var_+0.0001*comm_loss.mean()
         loss.backward()
         grad_clip = float(os.environ.get("grad_clip", 10))
         torch.nn.utils.clip_grad_norm_(self.eval_params, grad_clip)
         self.optimizer.step()
-        self.scheduler.step()
+
         self.optimizer.zero_grad()
 
-        tau = 5e-5
+        tau = 1e-4
         for target_param, local_param in zip(self.Q_tar.parameters(),
                                              self.Q.parameters()):
             target_param.data.copy_(tau * local_param.data + (1 - tau) * target_param.data)
