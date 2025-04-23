@@ -43,9 +43,9 @@ if sys.platform == "linux":
         "SC2PATH",
         os.path.join(os.path.expanduser("~"), "pymarl", "3rdparty", "StarCraftII")
     )
-    env = REGISTRY["sc2"](map_name=cfg.map_name, seed=124, step_mul=8, replay_dir="Replays", )
+    env = REGISTRY["sc2"](map_name=cfg.map_name, seed=12464, step_mul=8, replay_dir="Replays", )
 else:
-    env = StarCraft2Env(map_name = cfg.map_name, seed=124, step_mul=8, )
+    env = StarCraft2Env(map_name = cfg.map_name, seed=12464, step_mul=8, )
 
 
 map_name1 = cfg.map_name
