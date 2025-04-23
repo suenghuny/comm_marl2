@@ -212,9 +212,9 @@ class Agent(nn.Module):
                  min_graph_variance,
                  env
                  ):
-        torch.manual_seed(54)
-        random.seed(54)
-        np.random.seed(54)
+        torch.manual_seed(24)
+        random.seed(24)
+        np.random.seed(24)
         super(Agent, self).__init__()
         self.num_agent = num_agent
         self.num_enemy = num_enemy
